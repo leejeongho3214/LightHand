@@ -17,7 +17,7 @@ Build as the below architecture
 
 ## Models
 ```
-cp -r /home/jeongho/tmp/Wearable_Pose_Model/models/simplebaseline
+cp -r /home/jeongho/tmp/Wearable_Pose_Model/models
 ```
 
 ## datasets
