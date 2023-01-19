@@ -38,5 +38,5 @@ ex. python hrnet/frei/2d --epoch 100 --count 5 --reset
 
 1. count means to stop the training when valid loss don't fall after series of 5 epoch
 
-2. It saves automatically the check-point.pth whenever valid loss fall.
+2. It saves automatically the check-point.pth whenever valid loss fall. \bar
 Thus if you don't want to resume the check-point, insert "--reset"
