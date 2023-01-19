@@ -31,9 +31,8 @@ def build_dataset(args):
         test_dataset = test_set(args, path)
         return test_dataset, test_dataset
     
-    assert args.name.split("/")[0] in ["simplebaseline", "hourglass", "hrnet", "ours"], "Your name of model is the wrong, Choose in [simplebaseline, hourglass, hrnet, ours] => %s" % args.name.split("/")[0]
-    assert args.name.split("/")[1] in ["rhd", "coco", "frei", "panoptic", "hiu", "interhand", "ours"], "Your name of dataset is the wrong => %s" % args.name.split("/")[1]
-    
+    assert args.name.split("/")[0] in ["simplebaseline", "hourglass", "hrnet", "ours"], "Please write down the model name in [simplebaseline, hourglass, hrnet, ours], not %s" % args.name.split("/")[0]
+    assert args.name.split("/")[1] in ["rhd", "stb", "frei", "interhand","gan", "ours"], "Please write down the dataset name in [rhd, stb, frei, interhand, gan, ours], not %s" % args.name.split("/")[1]
     args.model = args.name.split("/")[0]
     args.dataset = args.name.split("/")[1]
     
@@ -42,27 +41,23 @@ def build_dataset(args):
         
     if args.dataset == "interhand":
         dataset = Dataset_interhand(transforms.ToTensor(), "train", args)     
-        trainset_dataset, testset_dataset = add_our(args, dataset, folder_num, path)
-        return trainset_dataset, testset_dataset
+        train_dataset, test_dataset = add_our(args, dataset, folder_num, path)
 
-    if args.dataset  == "hiu":
+    elif args.dataset  == "hiu":
         dataset = HIU_Dataset(args)
-        trainset_dataset, testset_dataset = add_our(args, dataset, folder_num, path)                 
-        return trainset_dataset, testset_dataset
+        train_dataset, test_dataset = add_our(args, dataset, folder_num, path)                 
 
-    if args.dataset == "frei":
-        trainset_dataset = make_hand_data_loader(
+    elif args.dataset == "frei":
+        train_dataset = make_hand_data_loader(
             args, args.train_yaml,  is_train=True) 
-        testset_dataset = make_hand_data_loader(
+        test_dataset = make_hand_data_loader(
             args, args.val_yaml,  is_train=False)      
-        return trainset_dataset, testset_dataset
 
-    if args.dataset == "rhd":
+    elif args.dataset == "rhd":
         dataset = Rhd(args)
-        trainset_dataset, testset_dataset = add_our(args, dataset, folder_num, path)                 
-        return trainset_dataset, testset_dataset
+        train_dataset, test_dataset = add_our(args, dataset, folder_num, path)                 
     
-    else:
+    elif args.dataset == "ours":
         eval_path = "/".join(path.split('/')[:-1]) + "/annotations/evaluation"
         train_dataset = our_cat(args,folder_num, path)
         test_dataset = val_set(args , 0, eval_path, args.color,

@@ -66,6 +66,7 @@ def load_model(args):
     epoch = 0
     best_loss = np.inf
     count = 0
+    resume = False
     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
     os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
     args.device = torch.device(args.device)
@@ -79,17 +80,27 @@ def load_model(args):
         
         
     log_dir = f'tensorboard/{args.name}'
-    if args.name.split("/")[0] != "final_model":
-        if args.reset: reset_folder(log_dir); reset_folder(os.path.join(args.root_path, args.name)); args.reset = "Init"
-        else: args.reset = "No Init"
-        
     writer = SummaryWriter(log_dir)
+    
     if os.path.isfile(os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin')):
+        resume = True
         best_loss, epoch, _model, count = resume_checkpoint(_model, os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin'))
         args.logger.debug("Loading ===> %s" % os.path.join(args.root_path, args.name))
         print(colored("Loading ===> %s" % os.path.join(args.root_path, args.name), "green"))
         
-    
+    if args.name.split("/")[0] != "final_model":
+        if args.reset: 
+            reset_folder(log_dir); reset_folder(os.path.join(args.root_path, args.name)); 
+            if resume:
+                args.reset = "resume then init"
+            else:
+                args.reset = "init"
+        else: 
+            if resume:
+                args.reset = "resume"
+            else:
+                reset_folder(log_dir); reset_folder(os.path.join(args.root_path, args.name)); args.reset = "init"
+                
     _model.to(args.device)
     
     return _model, best_loss, epoch, count, writer

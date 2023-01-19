@@ -106,7 +106,7 @@ class Runner(object):
     
                 
     def other(self, end):
-        heatmap_size, multiply = 64, 4
+        multiply = 4
         if self.phase == "TRAIN":
             self.model.train()
             for iteration, (images, gt_2d_joints, gt_heatmaps, _) in enumerate(self.train_loader):
@@ -163,6 +163,7 @@ class Runner(object):
                     pred = np.array(pred.detach().cpu())
                     pred_joint, _ = get_max_preds(pred) ## get the joint location from heatmap
                     pred_joint = pred_joint * multiply  ## heatmap resolution was 64 x 64 so multiply 4 to make it 256 x 256
+                    pred_joint = torch.tensor(pred_joint)
                 
                     pck = PCK_2d_loss(pred_joint, gt_2d_joint, T= 0.05, threshold='proportion')
                     epe_loss, _ = EPE_train(pred_joint, gt_2d_joint)  ## consider invisible joint

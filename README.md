@@ -17,12 +17,17 @@ Build as the below architecture
 
 ## Models
 ```
-cp -r /home/jeongho/tmp/Wearable_Pose_Model/models
+cd {$ROOT}
+cp -r /home/jeongho/tmp/armo_pose_estimation/models .
 ```
 
 ## datasets
+Choose the dataset name you want
+ex. name in freihand, ArmoHnad, etc.
 ```
-cp -r /home/jeongho/tmp/Wearable_Pose_Model/datasets/freihand
+cd {$ROOT}
+mkdir datasets
+cp -r /home/jeongho/tmp/Wearable_Pose_Model/datasets/{name} datasets/
 ```
 
 ## Train
