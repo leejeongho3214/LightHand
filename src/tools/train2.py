@@ -15,13 +15,13 @@ from src.utils.bar import colored
 def main(args):
 
     train_dataset, test_dataset = build_dataset(args)
-
     trainset_loader = data.DataLoader(dataset=train_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
     testset_loader = data.DataLoader(dataset=test_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
 
     _model, best_loss, epo, count, writer = load_model(args)
     pck_l = 0; batch_time = AverageMeter()
     d_type = "3D" if args.D3 else "2D"
+    
     for epoch in range(epo, args.epoch):
         if epoch == epo: 
             args.logger.debug( f"Path: {args.output_dir} | Dataset_len: {len(train_dataset)} | Type: {d_type} | Dataset: {args.dataset} | Model: {args.model} | Status: {args.reset} | Max_count : {args.count} | Max_epoch : {args.epoch}")

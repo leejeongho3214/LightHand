@@ -1,5 +1,7 @@
 import os
-import sys
+import cv2
+from matplotlib import pyplot as plt
+import scipy.io as sio
 from src.utils.transforms import world2cam, cam2pixel
 from src.utils.preprocessing import load_skeleton, process_bbox
 from pycocotools.coco import COCO
@@ -11,6 +13,7 @@ from torchvision import transforms
 import torch
 import os.path as op
 from torch.utils.data import random_split, ConcatDataset
+import numpy as np
 
 
 
@@ -94,66 +97,21 @@ class HIU_Dataset(Dataset):
             heatmap = GenerateHeatmap(128, 21)(joint_2d / 2)
         else:
             heatmap = GenerateHeatmap(64, 21)(joint_2d / 4)
+        return image, joint_2d, heatmap     # check plz
 
-        return trans_image, joint_2d, heatmap, torch.ones(21, 3)
-    
-class Frei(torch.utils.data.Dataset):
-    def __init__(self, args):
-        self.args = args
-        self.img_path = "../../datasets/frei_test/evaluation/rgb"
-        with open("../../datasets/frei_test/evaluation_K.json", "r") as st_json:
-            self.anno_K = json.load(st_json)
-        with open("../../datasets/frei_test/evaluation_xyz.json", "r") as st_json:
-            self.anno_xyz = json.load(st_json)
-        # with open("../../datasets/frei_test/evaluation_mano.json", "r") as st_json:
-        #     self.anno_mano = json.load(st_json)
-            
-    def __len__(self):
-        return len(self.anno_K)
-    
-    def __getitem__(self, idx):
-        anno_K = torch.tensor(self.anno_K[idx])
-        anno_xyz = torch.tensor(self.anno_xyz[idx])
-        # anno_mano = torch.tensor(self.anno_mano[idx][0][:-3])
-        
-        joint_2d = torch.matmul(anno_K, anno_xyz.T).T
-        joint_2d = (joint_2d[:, :2].T / joint_2d[:, -1]).T
-        
-        if not self.args.model == "ours":
-            size = 256
-        else:
-            size = 224
-        
-        image = Image.open(os.path.join(self.img_path, f"{str(idx).zfill(8)}.jpg"))
-        scale_x = size / image.width
-        scale_y = size / image.height
-
-        trans = transforms.Compose([transforms.Resize((size, size)),
-                                    transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
-        trans_image = trans(image)
-        joint_2d[:, 0] = joint_2d[:, 0] * scale_x
-        joint_2d[:, 1] = joint_2d[:, 1] * scale_y
-
-        if self.args.model == "hrnet":
-            heatmap = GenerateHeatmap(128, 21)(joint_2d/2)
-        else:
-            heatmap = GenerateHeatmap(64, 21)(joint_2d/4)
-
-        return trans_image, joint_2d, heatmap, anno_xyz
-    
 class Dataset_interhand(torch.utils.data.Dataset):
-    def __init__(self, transform, mode, args):
+    def __init__(self, mode, args):
+        root_path = "../../datasets"
+        if not os.path.isdir(os.path.join(root_path, 'interhand2.6m/5fps/images')):
+            root_path = "../../../../../../data1/"
         self.args = args
         self.mode = mode  # train, test, val
-        self.img_path = '../../datasets/InterHand2.6M/images'
-        self.annot_path = '../../datasets/InterHand2.6M/annotations'
+        self.img_path = os.path.join(root_path, 'interhand2.6m/5fps/images')
+        self.annot_path = os.path.join(root_path, 'interhand2.6m/5fps/annotations')
         if self.mode == 'val':
-            self.rootnet_output_path = '../../datasets/InterHand2.6M/rootnet_output/rootnet_interhand2.6m_output_val.json'
+            self.rootnet_output_path = os.path.join(root_path, 'interhand2.6m/rootnet_output/rootnet_interhand2.6m_output_val.json')
         else:
-            self.rootnet_output_path = '../../datasets/InterHand2.6M/rootnet_output/rootnet_interhand2.6m_output_test.json'
-        self.transform = transform
+            self.rootnet_output_path = os.path.join(root_path, 'interhand2.6m/rootnet_output/rootnet_interhand2.6m_output_test.json')
         self.joint_num = 21  # single hand
         self.root_joint_idx = {'right': 20, 'left': 41}
         self.joint_type = {'right': np.arange(
@@ -317,21 +275,16 @@ class Dataset_interhand(torch.utils.data.Dataset):
         joint[:, 0] = joint[:, 0] * (size / ori_img.width)
         joint[:, 1] = joint[:, 1] * (size / ori_img.height)
         targets = torch.tensor(joint[:21, :-1])
+        heatmap = GenerateHeatmap(64, 21)(targets/4)
 
-        if self.args.model == "hrnet":
-            heatmap = GenerateHeatmap(128, 21)(targets/2)
-        else:
-            heatmap = GenerateHeatmap(64, 21)(targets/4)
-
-        return img, targets, heatmap, torch.ones(21, 3)
+        return img, targets, heatmap
     
-class Rhd(Dataset):
-    def __init__(self, args):
+class RHD(Dataset):
+    def __init__(self, args, phase):
         self.args = args
         self.img_path = "../../datasets/rhd"
-        with open("../../datasets/rhd/annotations/rhd_train.json", "r") as st_json:
+        with open("../../datasets/rhd/annotations/rhd_%s.json" % phase, "r") as st_json:
             self.anno = json.load(st_json)
-        print()
 
     def __len__(self):
         return len(self.anno['annotations'])
@@ -371,14 +324,102 @@ class Rhd(Dataset):
         joint[:, 1] = joint[:, 1] * (size / self.anno['images'][idx]['height'])
         joint = torch.tensor(joint)
 
-        if self.args.model == "hrnet":
-            heatmap = GenerateHeatmap(128, 21)(joint/2)
-        else:
-            heatmap = GenerateHeatmap(64, 21)(joint/4)
+        heatmap = GenerateHeatmap(64, 21)(joint/4)
         img = Image.fromarray(img)
         img = trans(img)
 
-        return img, joint[:, :2].float(), heatmap, torch.ones(21, 3)
+        return img, joint[:, :2].float(), heatmap
+    
+class STB(Dataset):
+    def __init__(self, args):
+        self.args = args
+        self.img_path = "../../../../../../data1/STB"
+        anno_list = os.listdir("../../../../../../data1/STB/labels")
+        self.meta = {}
+        for a_path in anno_list:
+            anno = sio.loadmat(os.path.join("../../../../../../data1/STB/labels", a_path))
+            # self.meta[a_path] = anno
+            
+            image = np.array(Image.open(os.path.join(self.img_path, "images", "B1Counting", "BB_right_0.png")))
+            parents = np.array([-1, 0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13, 14, 15, 0, 17, 18, 19])
+            
+            # base line = 120.054 fx = 822.79041 fy = 822.79041 tx = 318.47345 ty = 250.31296
+            colorKmat = np.array([[607.92271, 0, 314.78337],  [0, 607.88192, 236.42484],  [0, 0, 1]])
+            
+            anno["handPara"][:, :, 0] = anno["handPara"][:, :, 0] - np.expand_dims(np.array([318-120, 250-120, 0]), axis =1).repeat(21, axis = 1)
+            anno["handPara"][:, :, 0] = np.dot(colorKmat, anno["handPara"][:, :, 0])
+            anno["handPara"][:, :, 0][:-1] = anno["handPara"][:, :, 0][:-1] / anno["handPara"][:, :, 0][2]
+            
+            # anno["handPara"][:, :, 0] = anno["handPara"][:, :, 0] + np.expand_dims(np.array([ 318 - 120, 250 - 120, 0]), axis =1).repeat(21, axis = 1)
+            
+            for i in range(21):
+                cv2.circle(image, (int(anno["handPara"][0][i][0]), int(anno["handPara"][1][i][0])), 2, [0, 1, 0],
+                        thickness=-1)
+                if i != 0:
+                    cv2.line(image, (int(anno["handPara"][0][i][0]), int(anno["handPara"][1][i][0])),
+                            (int(anno["handPara"][0][parents[i]][0]), int(anno["handPara"][1][parents[i]][0])),
+                            [0, 0, 1], 1)
+            plt.imshow(image)
+            plt.savefig('sample2.png')
+            print()
+
+    def __len__(self):
+        return len(self.anno['annotations'])
+
+    def __getitem__(self, idx):
+        print()
+
+
+class GAN(Dataset):
+    def __init__(self, args,):
+        self.args = args
+        self.img_path = "../../../../../../data1/GAN/GANeratedHands_Release/data/noObject"
+        img_folder= os.listdir(self.img_path)
+        self.meta = list()
+        
+        for i_folder in img_folder:
+            t_list = os.listdir(os.path.join(self.img_path, i_folder))
+            for name in t_list:
+                if name.split(".")[-1] == "png":
+                    img_num = name.split("_")[0]
+                    name = os.path.join(i_folder, name)
+                    anno_name = os.path.join(i_folder, img_num + "_joint2D.txt")
+                    self.meta.append((name, anno_name))
+
+    def __len__(self):
+            
+        return len(self.meta)
+
+    def __getitem__(self, idx):
+        
+        f = open(os.path.join(self.img_path, self.meta[idx][1])).read()
+        try:
+            anno = f.split(',')
+            anno[-1] = anno[-1][:-1
+                                ]
+            anno = list(map(float, anno))
+            anno = np.array(anno, dtype = int).reshape(21, -1)
+            joint_2d = torch.tensor(anno)
+        except:
+            print()
+        
+        if not self.args.model == "ours":
+            size = 256
+        else:
+            size = 224
+        
+        image = Image.open(os.path.join(self.img_path, self.meta[idx][0]))
+
+        trans = transforms.Compose([transforms.Resize((size, size)),
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+        trans_image = trans(image)
+
+        heatmap = GenerateHeatmap(64, 21)(joint_2d/4)
+        
+        return trans_image, joint_2d, heatmap
+        
     
     
 def add_our(args, dataset, folder_num, path):

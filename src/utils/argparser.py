@@ -75,31 +75,34 @@ def load_model(args):
         update_config(cfg, args)
         _model = get_hrnet(cfg, is_train=True)
         
-    elif args.model == 'simplebaseline': 
+    else: 
         _model = get_pose_net(config_simple, is_train=True)
         
         
     log_dir = f'tensorboard/{args.name}'
     writer = SummaryWriter(log_dir)
     
-    if os.path.isfile(os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin')):
-        resume = True
-        best_loss, epoch, _model, count = resume_checkpoint(_model, os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin'))
-        args.logger.debug("Loading ===> %s" % os.path.join(args.root_path, args.name))
-        print(colored("Loading ===> %s" % os.path.join(args.root_path, args.name), "green"))
-        
-    if args.name.split("/")[0] != "final_model":
+    if not args.eval:
         if args.reset: 
             reset_folder(log_dir); reset_folder(os.path.join(args.root_path, args.name)); 
             if resume:
-                args.reset = "resume then init"
+                print(colored("Ignore the check-point model", "green"))
+                args.reset = "resume but init"
             else:
                 args.reset = "init"
         else: 
-            if resume:
+            if os.path.isfile(os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin')):
+                best_loss, epoch, _model, count = resume_checkpoint(_model, os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin'))
+                args.logger.debug("Loading ===> %s" % os.path.join(args.root_path, args.name))
+                print(colored("Loading ===> %s" % os.path.join(args.root_path, args.name), "green"))
                 args.reset = "resume"
             else:
                 reset_folder(log_dir); reset_folder(os.path.join(args.root_path, args.name)); args.reset = "init"
+                
+    else:
+        best_loss, epoch, _model, count = resume_checkpoint(_model, args.output_dir)
+        
+
                 
     _model.to(args.device)
     
@@ -109,142 +112,172 @@ def load_model(args):
 
 def train(args, train_dataloader, test_dataloader, Graphormer_model, epoch, best_loss, data_len ,logger, count, writer, pck, len_total, batch_time):
     end = time.time()
-    phase = 'TRAIN'
-    runner = Runner(args, Graphormer_model, epoch, train_dataloader, test_dataloader, phase, batch_time, logger, data_len, len_total, count, pck, best_loss, writer)
-    Graphormer_model, optimizer, batch_time= runner.other(end)
+    runner = Runner(args, Graphormer_model, epoch, train_dataloader, test_dataloader, "TRAIN", batch_time, logger, data_len, len_total, count, pck, best_loss, writer)
+    Graphormer_model, optimizer, batch_time= runner.train(end)
         
     return Graphormer_model, optimizer, batch_time, best_loss
 
 def valid(args, train_dataloader, test_dataloader, Graphormer_model, epoch, count, best_loss,  data_len ,logger, writer, batch_time, len_total, pck):
     end = time.time()
-    phase = 'VALID'
-    runner = Runner(args, Graphormer_model, epoch, train_dataloader, test_dataloader, phase, batch_time, logger, data_len, len_total, count, pck, best_loss, writer)
-    loss, count, pck, batch_time = runner.other(end)
+    runner = Runner(args, Graphormer_model, epoch, train_dataloader, test_dataloader, 'VALID', batch_time, logger, data_len, len_total, count, pck, best_loss, writer)
+    loss, count, pck, batch_time = runner.train(end)
        
     return loss, count, pck, batch_time
 
 def pred_store(args, dataloader, model, pbar):
     
-    if os.path.isfile(os.path.join(args.output_dir, "pred.json")):
+    if os.path.isfile(os.path.join("final_model", args.name, "evaluation.json")):
+        pbar.update(len(dataloader)) 
         return
     
-    xy_list, p_list, gt_list = [], [], []
+    meta = {'Standard':{"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Pinky': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Thumb': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Both': {"bb": [], "pred": [], "gt": []}}
     with torch.no_grad():
-        for (images, gt_2d_joints, _, anno) in dataloader:
+        for (images, gt_2d_joints, anno) in dataloader:
+            bbox_size = list()
             images = images.cuda()
-            gt_2d_joint = gt_2d_joints.cuda()
             pred_2d_joints = model(images)
-            pred_2d_joints[:, :, 1] = pred_2d_joints[:, :, 1] * images.size(2) ## You Have to check whether weight and height is correct dimenstion
-            pred_2d_joints[:, :, 0] = pred_2d_joints[:, :, 0] * images.size(3)
+            pred_2d_joints = np.array(pred_2d_joints.detach().cpu())
+            pred_joint, _ = get_max_preds(pred_2d_joints) ## get the joint location from heatmap
+            pred_joint = pred_joint * 4  ## heatmap resolution was 64 x 64 so multiply 4 to make it 256 x 256
+            pred_joint = torch.tensor(pred_joint)
+    
             if args.plt:
                 for i in range(images.size(0)):
                     fig = plt.figure()
-                    visualize_gt(images, gt_2d_joint, fig, 0)
-                    visualize_pred(images, pred_2d_joints, fig, 'evaluation', 0, i, args, anno)
+                    visualize_gt(images, gt_2d_joints, fig, 0)
+                    visualize_pred(images, pred_joint, fig, 'evaluation', 0, i, args, anno)
                     plt.close()
-            gt_list.append(gt_2d_joints.tolist())
-            xy_list.append(pred_2d_joints.tolist())
-            p_list.append(anno)
-            pbar.update(1) 
             
-    dump(os.path.join("output", "gt_test.json"), gt_list)
-    dump(os.path.join(args.output_dir, "pred.json"), xy_list)
-    # dump(os.path.join(args.output_dir, "pred_p.json"), p_list)
+            for j in gt_2d_joints:
+                width = max(j[:,0]) - min(j[:,0])
+                height = max(j[:,1]) - min(j[:,1])
+                length = np.sqrt(width ** 2 + height ** 2)
+                bbox_size.append(length.item())
+                
+            for idx, name in enumerate(anno):
+                meta[name]["bb"].append(bbox_size[idx])
+                meta[name]["pred"].append(pred_joint[idx].tolist())
+                meta[name]["gt"].append(gt_2d_joints[idx].tolist())
+                
+            pbar.update(1) 
 
-    
-def pred_eval(args, T_list, Threshold_type):
-
-    gt_path = os.path.join("output/gt.json")
-    pred_path = os.path.join(args.output_dir, "pred.json")
-    pose_path = os.path.join("output/pred_p.json")
-    
-    with open(gt_path, 'r') as fi:
-        gt_json = json.load(fi)
-    with open(pred_path, 'r') as fi:
-        pred_json = json.load(fi)
-    with open(pose_path, 'r') as fi:
-        pose_json = json.load(fi)
+        dump(os.path.join("final_model", args.name, "evaluation.json"), meta)
         
-    pred = [x for i in range(len(pred_json[0])) for x in pred_json[0][i]]
-    pose = [x for i in range(len(pose_json[0])) for x in pose_json[0][i]]
-    gt = [x for i in range(len(gt_json[0])) for x in gt_json[0][i]]
+def pred_store_test(args, dataloader, model, pbar):
+    
+    if os.path.isfile(os.path.join("final_model", args.name, "test.json")):
+        pbar.update(len(dataloader))
+        return
+    
+    meta = {"pred": [], "gt": [], 'bb': []}
+
+    with torch.no_grad():
+        for (images, gt_2d_joints) in dataloader:
+            bbox_size = list()
+            images = images.cuda()
+            pred_2d_joints = model(images)
+            pred_2d_joints = np.array(pred_2d_joints.detach().cpu())
+            pred_joint, _ = get_max_preds(pred_2d_joints) ## get the joint location from heatmap
+            pred_joint = pred_joint * 4  ## heatmap resolution was 64 x 64 so multiply 4 to make it 256 x 256
+            pred_joint = torch.tensor(pred_joint)
+    
+            if args.plt:
+                for i in range(images.size(0)):
+                    fig = plt.figure()
+                    visualize_gt(images, gt_2d_joints, fig, 0)
+                    visualize_pred(images, pred_joint, fig, 'evaluation', 0, i, args)
+                    plt.close()
+                    
+            for j in gt_2d_joints:
+                width = max(j[:,0]) - min(j[:,0])
+                height = max(j[:,1]) - min(j[:,1])
+                length = np.sqrt(width ** 2 + height ** 2)
+                bbox_size.append(length.item())
+            
+            meta['pred'].append(pred_joint.tolist())
+            meta['gt'].append(gt_2d_joints.tolist())
+            meta['bb'].append(bbox_size)
+                
+            pbar.update(1) 
+
+        dump(os.path.join("final_model", args.name, "test.json"), meta)
+
+    
+def pred_eval(args, T_list, p_bar):
+    
+    pck_list = dict()
+    
+    with open(os.path.join("final_model", args.name, "evaluation.json"), 'r') as fi:
+        meta = json.load(fi)
+        
+    meta = meta[0]
     thresholds_list = np.linspace(T_list[0], T_list[-1], 100)
     thresholds = np.array(thresholds_list)
-    norm_factor = np.trapz(np.ones_like(thresholds), thresholds)
+    norm_factor = np.trapz(np.ones_like(thresholds), thresholds)   
+    total_pck = torch.empty(0)
     
-    pck_list = {'Standard':{}, 'Occlusion_by_Pinky': {}, 'Occlusion_by_Thumb': {}, 'Occlusion_by_Both': {}}
-    epe_list = {'Standard':[], 'Occlusion_by_Pinky': [], 'Occlusion_by_Thumb': [], 'Occlusion_by_Both': []}
-
-    for p_type in pck_list: 
-        pck_list[f'{p_type}']['total'] = []
-        for T in T_list: 
-            pck_list[f'{p_type}'][f'{T:.2f}'] = []
-            
-    for (pred_joint, p_type, gt_joint) in zip(pred, pose, gt):
+    for p_type in meta:
+        bbox = np.array(meta[p_type]["bb"])     ## each bounding box's dianogal length
+        pred = np.array(meta[p_type]["pred"])
+        gt = np.array(meta[p_type]["gt"])       ## batch_siez x 21 x 2
+         
+        diff = np.sqrt(np.sum(np.square(gt[:, :, :2] - pred[:, :, :2]), axis = -1))   ## 900 x 21
+        norm_diff = diff / bbox[:, None].repeat(21, axis = 1)
+        norm_diff = norm_diff[:, :, None]
+        norm_diff = torch.concat([torch.tensor(norm_diff), torch.tensor(gt[:, :, -1][:, :, None])], dim = -1)
+        norm_diff = norm_diff[norm_diff[:, :, 1] == 1][:, 0]
         
-        gt_joint = torch.tensor(gt_joint)[None, :]
-        pred_joint = torch.tensor(pred_joint)[None, :]
-        pck_t = list()
-        for T in T_list:     
-            pck = PCK_2d_loss_visible(pred_joint, gt_joint, T, Threshold_type)
-            if T == T_list[0]:
-                epe, _ = EPE(pred_joint, gt_joint)
-                epe_list[f'{p_type}'].append((epe[0]/epe[1]) * 0.264583) ## pixel -> mm
-            pck_list[f'{p_type}'][f'{T:.2f}'].append(pck)
-        for th in thresholds_list:
-            pck = PCK_2d_loss_visible(pred_joint, gt_joint, th, Threshold_type)
-            pck_t.append(pck * 100)
-        
+        total_pck = torch.concat([norm_diff, total_pck])
+        total = len(norm_diff)
+        pck_t = [(len(norm_diff[norm_diff < T])/total) * 100 for T in thresholds_list]     ## calculate a pck according to each threshold that it has 100 values
         pck_t = np.array(pck_t)
+        
         auc = np.trapz(pck_t, thresholds)
         auc /= (norm_factor + sys.float_info.epsilon)
-        pck_list[f'{p_type}']['total'].append(auc)
-    
-    for j in pck_list:
-        for i in pck_list[j]:
-            pck_list[j][i] = np.array(pck_list[j][i]).mean()
-    for i in epe_list:
-        epe_list[i] = np.array(epe_list[i]).mean()
         
+        pck_list["%s"%p_type] = auc
+        p_bar.update(1)
         
-    return pck_list, epe_list
+    total = len(total_pck)
+    pck_t = [(len(total_pck[total_pck < T])/total) * 100 for T in thresholds_list]     ## calculate a pck according to each threshold that it has 100 values
+    pck_t = np.array(pck_t)
+    auc = np.trapz(pck_t, thresholds)
+    auc /= (norm_factor + sys.float_info.epsilon)
+    pck_list["mean_auc"] = auc
+        
+    return pck_list, p_bar
 
 
-def pred_test(args, T_list, Threshold_type, pbar, dataloader, model):
+def pred_test(args, T_list, pbar):
 
+
+    with open(os.path.join("final_model", args.name, "test.json"), 'r') as fi:
+        meta = json.load(fi)
+
+    meta = meta[0]
     thresholds_list = np.linspace(T_list[0], T_list[-1], 100)
     thresholds = np.array(thresholds_list)
-    norm_factor = np.trapz(np.ones_like(thresholds), thresholds)
+    norm_factor = np.trapz(np.ones_like(thresholds), thresholds)   
 
-    pck_list = {'0.05':[], "0.1":[], "0.15": [], "0.2": [], "epe": [], "total": []}
-    with torch.no_grad():
-        for (images, gt_2d_joints, _, anno) in dataloader:
-            images = images.cuda()
-            gt_2d_joint = gt_2d_joints.cuda()
-            pred_2d_joints = model(images)
-            pred_2d_joints[:, :, 1] = pred_2d_joints[:, :, 1] * images.size(2) ## You Have to check whether weight and height is correct dimenstion
-            pred_2d_joints[:, :, 0] = pred_2d_joints[:, :, 0] * images.size(3)
-            
-            if args.plt:
-                for i in range(images.size(0)):
-                    fig = plt.figure()
-                    visualize_gt(images, gt_2d_joint, fig,i)
-                    visualize_pred(images, pred_2d_joints, fig, 'evaluation', 0, i, args, anno)     ##
-                    plt.close()
-            
-            pck_l, auc_l= PCK_2d_loss_list(pred_2d_joints, gt_2d_joint, T_list, Threshold_type, thresholds)       ##
-            epe, _ = EPE_train(pred_2d_joints, gt_2d_joint)
-            for pck_p in pck_l:
-                pck_list[f"{pck_p[0]}"].append(pck_p[1])
-            pck_list["epe"].append((epe[0]/epe[1]) * 0.264583)
+    bbox = np.array(meta["bb"])     ## each bounding box's dianogal length
+    pred = np.array(meta["pred"])
+    gt = np.array(meta["gt"])       ## batch_siez x 21 x 2
     
-            auc_l = np.array(auc_l)
-            auc = np.trapz(auc_l, thresholds)
-            auc /= (norm_factor + sys.float_info.epsilon)
-            pck_list["total"].append(auc)
-            pbar.update(1)
+    bbox = np.array([np.array(bbox[i][j]) for i in range(len(bbox)) for j in range(len(bbox[i])) ])
+    gt = np.array([np.array(gt[i][j]) for i in range(len(gt)) for j in range(len(gt[i])) ])
+    pred = np.array([np.array(pred[i][j]) for i in range(len(pred)) for j in range(len(pred[i])) ])
+  
+    diff = np.sqrt(np.sum(np.square(gt - pred), axis = -1))   ## batch x 21
+    norm_diff = diff / bbox[:, None].repeat(21, axis = -1)
+    norm_diff = norm_diff.flatten()
+    
+    total = len(norm_diff)
+    
+    pck_t = [(len(norm_diff[norm_diff < T])/total) * 100 for T in thresholds_list]     ## calculate a pck according to each threshold that it has 100 values
+    pck_t = np.array(pck_t)
+    
+    auc = np.trapz(pck_t, thresholds)
+    auc /= (norm_factor + sys.float_info.epsilon)
+    pbar.update(1)
         
-        for j in pck_list:
-            pck_list[j] = np.nanmean(np.array(pck_list[j]))
-        
-    return pck_list, pbar
+    return auc, pbar

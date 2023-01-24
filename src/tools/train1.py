@@ -2,7 +2,6 @@ import gc
 import os
 import sys
 
-
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
 os.environ["CUDA_VISIBLE_DEVICES"]= "1" 
 os.environ["TF_ENABLE_ONEDNN_OPTS"]="0"
@@ -22,6 +21,7 @@ def main(args):
     _model, best_loss, epo, count, writer = load_model(args)
     pck_l = 0; batch_time = AverageMeter()
     d_type = "3D" if args.D3 else "2D"
+
     for epoch in range(epo, args.epoch):
         if epoch == epo: 
             args.logger.debug( f"Path: {args.output_dir} | Dataset_len: {len(train_dataset)} | Type: {d_type} | Dataset: {args.dataset} | Model: {args.model} | Status: {args.reset} | Max_count : {args.count} | Max_epoch : {args.epoch}")
@@ -50,3 +50,4 @@ def main(args):
 if __name__ == "__main__":
     args= parse_args()
     main(args)
+

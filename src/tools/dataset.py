@@ -8,9 +8,10 @@ from src.datasets.build import make_hand_data_loader
 import json
 import math
 import torch
-from src.utils.dataset_loader import Dataset_interhand, HIU_Dataset, Rhd, GenerateHeatmap, add_our, our_cat
+from src.utils.dataset_loader import Dataset_interhand, STB, RHD, GAN, GenerateHeatmap, add_our, our_cat
 import os.path as op
 import random
+from torch.utils.data import random_split
 import cv2
 import numpy as np
 from torch.utils.data import Dataset
@@ -40,161 +41,115 @@ def build_dataset(args):
     folder_num = [i for i in folder if i not in ["README.txt", "data.zip"]]
         
     if args.dataset == "interhand":
-        dataset = Dataset_interhand(transforms.ToTensor(), "train", args)     
-        train_dataset, test_dataset = add_our(args, dataset, folder_num, path)
+        train_dataset = Dataset_interhand("train", args)     
+        test_dataset = Dataset_interhand("val", args)     
 
-    elif args.dataset  == "hiu":
-        dataset = HIU_Dataset(args)
-        train_dataset, test_dataset = add_our(args, dataset, folder_num, path)                 
-
-    elif args.dataset == "frei":
-        train_dataset = make_hand_data_loader(
-            args, args.train_yaml,  is_train=True) 
-        test_dataset = make_hand_data_loader(
-            args, args.val_yaml,  is_train=False)      
-
+    elif args.dataset == "frei":            ## Frei don't provide 2d anno in valid-set
+        dataset = make_hand_data_loader(                
+            args, args.train_yaml,  is_train=True)                                
+        ## This function's name is random_split but i change it to split the dataset by sqeuntial order
+        train_dataset, test_dataset = random_split(dataset, [int(len(dataset) * 0.9), len(dataset) - (int(len(dataset) * 0.9))])       
+ 
     elif args.dataset == "rhd":
-        dataset = Rhd(args)
-        train_dataset, test_dataset = add_our(args, dataset, folder_num, path)                 
+        train_dataset = RHD(args, "train")
+        test_dataset = RHD(args, "test")      
+    
+    elif args.dataset == "stb":
+        train_dataset = STB(args)
+        test_dataset = STB(args)
+        
+        # train_dataset, test_dataset = add_our(args, dataset, folder_num, path) 
+        
+    elif args.dataset == "gan":
+        dataset = GAN(args)     # same reason as above
+        train_dataset, test_dataset = random_split(dataset, [int(len(dataset) * 0.9), len(dataset) - (int(len(dataset) * 0.9))])
     
     elif args.dataset == "ours":
         eval_path = "/".join(path.split('/')[:-1]) + "/annotations/evaluation"
-        train_dataset = our_cat(args,folder_num, path)
-        test_dataset = val_set(args , 0, eval_path, args.color,
-                                    args.ratio_of_aug, args.ratio_of_our)
+        train_dataset = CustomDataset(args,  path, "train")
+        test_dataset = val_set(args , eval_path, "val")
     return train_dataset, test_dataset
 
     
 
 class CustomDataset(Dataset):
-    def __init__(self, args, degree, path, color=False, ratio_of_aug=0.2, ratio_of_dataset=1):
+    def __init__(self, args, path, phase):
         self.args = args
-        self.color = color
-        self.degree = degree
         self.path = path
-        self.ratio_of_aug = ratio_of_aug
-        self.ratio_of_dataset = ratio_of_dataset
-        self.img_path = f'{path}/{degree}/images/train'
-        try:
-            if degree == None:
-                with open(f"{path}/annotations/train/CISLAB_train_data_update.json", "r") as st_json:   ## When it has only one json file
-                    self.meta = json.load(st_json)
-                    self.img_path = f'{path}/images/train'
-            else:
-                with open(f"{path}/{degree}/annotations/train/CISLAB_train_data_update.json", "r") as st_json:
-                    self.meta = json.load(st_json)              
-        except:
-            self.meta = None           ## When it calls eval_set inheritng parent's class
-        
+        self.phase = phase
+        self.ratio_of_aug = args.ratio_of_aug
+        if phase == "train":
+            with open(f"{path}/revision_data.json", "r") as st_json:
+                self.meta = json.load(st_json)
+                self.meta = self.meta[: int(len(self.meta) * args.ratio_of_our)]
+
+        # self.meta = list() 
+        #  self.len = len(degrees)
+        # for num in degrees:
+        #     with open(f"{path}/{num}/annotations/train/CISLAB_train_data_update.json", "r") as st_json:
+        #         anno = json.load(st_json)
+        #     # anno = anno["images"][:int(len(anno["images"])* self.args.ratio_of_our)]
+        #     anno = anno["images"]
+        #     for idx in range(len(anno)):
+        #         anno[idx]["num"] = num
+        #     self.meta += anno   
     
     def __len__(self):
-        return int(len(self.meta['images']) * self.ratio_of_dataset)     
+        return int(len(self.meta))     
 
     def __getitem__(self, idx):
-        name = self.meta['images'][idx]['file_name']
-        move = self.meta['images'][idx]['move']
-        degrees = self.meta['images'][idx]['degree']
-        image = cv2.imread(os.path.join(self.img_path, name))   ## Color order of cv2 is BGR
+        name = self.meta[idx]['file_name']
+        move = self.meta[idx]['move']
+        degrees = self.meta[idx]['degree']
+        
+        if self.phase == "train":
+            num = self.meta[idx]["num"]
+            image = cv2.imread(os.path.join(self.path, num,"images/train" , name))   ## Color order of cv2 is BGR    
+        else:
+            image = cv2.imread(os.path.join(self.path, name))
+        
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         if not self.args.model == "ours":
             image_size = 256
+            joint_multiply = 256/224
         else:
             image_size = 224
+            joint_multiply = 1
 
-        trans_option = {
-            'resize': transforms.Resize((image_size, image_size)),
-            'to_tensor': transforms.ToTensor(),
-            'color': transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
-            'norm': transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        }
-        
-        if not self.color:
-            del trans_option['color']
-        
         image = i_rotate(image, degrees, 0, move)
         image = Image.fromarray(image)
-        joint_2d = torch.tensor(self.meta['images'][idx]['rot_joint_2d'])
+        joint_2d = torch.tensor(self.meta[idx]['rot_joint_2d']) * joint_multiply
         
-        if idx < len(self.meta['images']) * self.ratio_of_aug:
+        if idx < len(self.meta) * self.ratio_of_aug:
 
-            trans = transforms.Compose([trans_option[i] for i in trans_option])
-
-            
+            trans = transforms.Compose([transforms.Resize((image_size, image_size)),
+                                        transforms.ToTensor(),
+                                        transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
+                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    
         else:
             trans = transforms.Compose([transforms.Resize((image_size, image_size)),
                                         transforms.ToTensor(),
                                         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         image = trans(image)
         
-        if self.args.model == "hrnet":
-            heatmap = GenerateHeatmap(128, 21)(joint_2d/2)
-        else:
-            heatmap = GenerateHeatmap(64, 21)(joint_2d/4)
+        heatmap = GenerateHeatmap(64, 21)(joint_2d / 4)
             
-        joint_3d = torch.tensor(self.meta['images'][idx]['joint_3d'])
 
 
-        return image, joint_2d, heatmap, joint_3d
+        return image, joint_2d, heatmap
 
-
-class CustomDataset_g(Dataset):
-    def __init__(self, args, path):
-        self.phase = path.split("/")[-1]
-        self.root = "/".join(path.split("/")[:-2])
-        with open(f"{path}/CISLAB_{self.phase}_data_update.json", "r") as st_json:
-            self.meta = json.load(st_json)
-        self.args = args
-        self.path = path
-        self.img_path = os.path.join(self.root, f"images/{self.phase}")
-        
-    def __len__(self):
-        return len(self.meta['images'])
-        
-    def __getitem__(self, idx):
-        name = self.meta['images'][idx]['file_name']
-        move_x = self.meta['images'][idx]['move_x']
-        move_y = self.meta['images'][idx]['move_y']
-        image = cv2.imread(os.path.join(self.img_path, name))  # PIL image
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = i_rotate(image, 0, move_x, move_y)
-        
-        if not self.args.model == "ours":
-            image_size = 256
-        else:
-            image_size = 224
-            
-        image = Image.fromarray(image)
-        trans = transforms.Compose([transforms.Resize((image_size, image_size)),
-                            transforms.ToTensor(),
-                            
-                            transforms.RandomApply(torch.nn.ModuleList([transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5)]), p=self.args.ratio_of_aug),
-                            
-                                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-        image = trans(image)
-        joint_3d = torch.tensor(self.meta['images'][idx]['joint_3d'])
-        joint_3d[:, 0] = - joint_3d[:, 0]
-        joint_3d = joint_3d - joint_3d[0, :]
-
-        return image, joint_3d, joint_3d, joint_3d
     
 class val_set(CustomDataset):
     def __init__(self,  *args):
         super().__init__(*args)
         self.ratio_of_aug = 0
-        self.ratio_of_dataset = 1
+        self.args.ratio_of_dataset = 1
         with open(os.path.join(self.path, "evaluation_data_update.json"), "r") as st_json:
-            self.meta = json.load(st_json)
-        self.img_path = "/".join(self.path.split('/')[:-2]) +"/images/evaluation"
-        
-class val_g_set(CustomDataset_g):
-    def __init__(self,  *args):
-        super().__init__(*args)
-        self.ratio_of_aug = 0
-        self.ratio_of_dataset = 1
-        with open(os.path.join(self.path, "CISLAB_val_data_update.json"), "r") as st_json:
-            self.meta = json.load(st_json)
-        self.img_path = os.path.join(self.root,f"images/{self.phase}" )
+            self.meta = json.load(st_json)["images"]
+        self.path = "/".join(self.path.split('/')[:-2]) +"/images/evaluation"
+
 
 class test_set(Dataset):
     def __init__(self, args, path):
@@ -215,8 +170,10 @@ class test_set(Dataset):
 
         if not self.args.model == "ours":
             image_size = 256
+            joint_multiply = 256/224
         else:
             image_size = 224
+            joint_multiply = 1
 
         image = Image.fromarray(image)
         joint_2d = torch.tensor(self.meta['images'][idx]['joint_2d'])
@@ -225,17 +182,10 @@ class test_set(Dataset):
                                     transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         image = trans(image)
-        
-        if self.args.model == "hrnet":
-            heatmap = GenerateHeatmap(128, 21)(joint_2d/2)
-        else:
-            heatmap = GenerateHeatmap(64, 21)(joint_2d/4)
-            
-        joint_3d = torch.tensor(self.meta['images'][idx]['joint_3d'])
+        joint_2d[:, 0] = joint_2d[:, 0] * joint_multiply
+        joint_2d[:, 1] = joint_2d[:, 1]
 
-
-        return image, joint_2d, heatmap, joint_3d
-
+        return image, joint_2d
 
 class eval_set(Dataset):
     def __init__(self, args):
@@ -279,16 +229,8 @@ class eval_set(Dataset):
         joint_2d_v[:, 1] = joint_2d_v[:, 1] * image.height
         joint_2d[:, 0] = joint_2d[:, 0] * image.width
         joint_2d[:, 1] = joint_2d[:, 1] * image.height
-        
-        if self.args.model == "hrnet":
-            heatmap = GenerateHeatmap(128, 21)(joint_2d / 2)
-        else:
-            heatmap = GenerateHeatmap(64, 21)(joint_2d / 4)
             
-        if self.args.eval:
-            return trans_image, joint_2d_v, heatmap, pose_type
-        else:
-            return trans_image, joint_2d_v, heatmap, joint_2d_v
+        return trans_image, joint_2d_v, pose_type
 
 
 class AverageMeter(object):

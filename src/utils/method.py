@@ -105,11 +105,11 @@ class Runner(object):
         self.bar.next()
     
                 
-    def other(self, end):
+    def train(self, end):
         multiply = 4
         if self.phase == "TRAIN":
             self.model.train()
-            for iteration, (images, gt_2d_joints, gt_heatmaps, _) in enumerate(self.train_loader):
+            for iteration, (images, gt_2d_joints, gt_heatmaps) in enumerate(self.train_loader):
                 batch_size = images.size(0)
                 adjust_learning_rate(self.optimizer, self.epoch, self.args)
                 images = images.cuda()
@@ -142,15 +142,15 @@ class Runner(object):
                 if iteration == len(self.train_loader) - 1:
                    self. writer.add_scalar("Loss/train", self.log_losses.avg, self.epoch)
                    
-                if iteration % 100 == 99:
-                    self.writer.add_scalar(f"Loss/train/{self.epoch}_epoch", self.log_losses.avg, iteration)
+                # if iteration % 100 == 99:
+                #     self.writer.add_scalar(f"Loss/train/{self.epoch}_epoch", self.log_losses.avg, iteration)
 
             return self.model, self.optimizer, self.batch_time
 
         else:
             self.model.eval()
             with torch.no_grad():
-                for iteration, (images, gt_2d_joints, gt_heatmaps, _) in enumerate(self.valid_loader):
+                for iteration, (images, gt_2d_joints, gt_heatmaps) in enumerate(self.valid_loader):
                     batch_size = images.size(0)
                     images = images.cuda()
                     gt_2d_joint = gt_2d_joints.cuda()
