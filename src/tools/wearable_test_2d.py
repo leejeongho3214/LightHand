@@ -18,7 +18,6 @@ def main(args):
     args.test = True
     _, test_dataset = build_dataset(args)
     testset_loader = data.DataLoader(dataset=test_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
-
     model_path = "final_model"
     model_list = list()
     for (root, _, files) in os.walk(model_path):
@@ -30,11 +29,11 @@ def main(args):
     for path_name in model_list:
         args.model = path_name.split('/')[1]
         args.name = ('/').join(path_name.split('/')[1:-2])
-        args.output_dir = os.path.join(model_path, args.name)
+        args.output_dir = path_name
         _model, _, _, _, _ = load_model(args)
         state_dict = torch.load(path_name)
         _model.load_state_dict(state_dict['model_state_dict'], strict=False)
-        T_list = [0.05, 0.1, 0.15, 0.2]
+        T_list = [0.1, 0.2]
         pred_store_test(args, testset_loader, _model, pbar)  
         pck, pbar = pred_test(args, T_list, pbar)
         pck_list.append([pck, args.name])

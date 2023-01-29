@@ -82,12 +82,13 @@ def load_model(args):
     log_dir = f'tensorboard/{args.name}'
     writer = SummaryWriter(log_dir)
     
-    if not args.eval:
+    if args.name.split("/")[0] != "final_model":
         if args.reset: 
-            reset_folder(log_dir); reset_folder(os.path.join(args.root_path, args.name)); 
-            if resume:
-                print(colored("Ignore the check-point model", "green"))
-                args.reset = "resume but init"
+            if os.path.isfile(os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin')):
+                if True if input("There is resume_point but do you want to delete?") == "o" else False:
+                    reset_folder(log_dir); reset_folder(os.path.join(args.root_path, args.name)); 
+                    print(colored("Ignore the check-point model", "green"))
+                    args.reset = "resume but init"
             else:
                 args.reset = "init"
         else: 
@@ -97,13 +98,8 @@ def load_model(args):
                 print(colored("Loading ===> %s" % os.path.join(args.root_path, args.name), "green"))
                 args.reset = "resume"
             else:
-                reset_folder(log_dir); reset_folder(os.path.join(args.root_path, args.name)); args.reset = "init"
-                
-    else:
-        best_loss, epoch, _model, count = resume_checkpoint(_model, args.output_dir)
-        
-
-                
+                reset_folder(log_dir); args.reset = "init"
+     
     _model.to(args.device)
     
     return _model, best_loss, epoch, count, writer
@@ -126,9 +122,9 @@ def valid(args, train_dataloader, test_dataloader, Graphormer_model, epoch, coun
 
 def pred_store(args, dataloader, model, pbar):
     
-    if os.path.isfile(os.path.join("final_model", args.name, "evaluation.json")):
-        pbar.update(len(dataloader)) 
-        return
+    # if os.path.isfile(os.path.join("final_model", args.name, "evaluation.json")):
+    #     pbar.update(len(dataloader)) 
+    #     return
     
     meta = {'Standard':{"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Pinky': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Thumb': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Both': {"bb": [], "pred": [], "gt": []}}
     with torch.no_grad():

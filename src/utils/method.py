@@ -57,16 +57,16 @@ class Runner(object):
             self.bar.suffix = ('({iteration}/{data_loader}) '
                             'name: {name} | '
                             'count: {count} | '
-                            'loss: {total:.6f} | '
-                            'exp: {exp} \r'
+                            'loss: {total:.6f} \r'
+                            # 'exp: {exp} \r'
                             ).format(name= self.args.name.split('/')[-1], count = self.count, iteration = iteration, exp = tt,
                                         data_loader = len(self.now_loader), total = self.log_losses.avg)
         else:
             self.bar.suffix = ('({iteration}/{data_loader}) '
                             'name: {name} | '
                             'count: {count} | '
-                            'loss: {total:.6f} | '
-                            'exp: {exp}'
+                            'loss: {total:.6f} '
+                            # 'exp: {exp}'
                             ).format(name= self.args.name.split('/')[-1], count = self.count, iteration = iteration, exp = tt,
                                         data_loader = len(self.now_loader), total = self.log_losses.avg)
         self.bar.next()
@@ -141,10 +141,8 @@ class Runner(object):
                 self.train_log(iteration, eta_seconds, end)
                 if iteration == len(self.train_loader) - 1:
                    self. writer.add_scalar("Loss/train", self.log_losses.avg, self.epoch)
-                   
                 # if iteration % 100 == 99:
                 #     self.writer.add_scalar(f"Loss/train/{self.epoch}_epoch", self.log_losses.avg, iteration)
-
             return self.model, self.optimizer, self.batch_time
 
         else:

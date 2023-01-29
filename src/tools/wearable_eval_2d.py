@@ -3,9 +3,8 @@ import os
 import sys
 from tqdm import tqdm
 
-
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
-os.environ["CUDA_VISIBLE_DEVICES"]= "3" 
+os.environ["CUDA_VISIBLE_DEVICES"]= "0" 
 os.environ["TF_ENABLE_ONEDNN_OPTS"]="0"
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -19,7 +18,7 @@ def main(args):
     args.eval = True
     _, eval_dataset = build_dataset(args)
     testset_loader = data.DataLoader(dataset=eval_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
-
+    print(len(eval_dataset))
     model_path = "final_model"
     model_list, pck_list = list(), list()
     for (root, _, files) in os.walk(model_path):

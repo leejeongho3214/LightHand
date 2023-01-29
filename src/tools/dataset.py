@@ -193,31 +193,40 @@ class eval_set(Dataset):
         self.image_path = f'../../datasets/test/rgb'
         self.anno_path = f'../../datasets/test/annotations.json'
         self.list = os.listdir(self.image_path)
-
+        with open(self.anno_path, "r") as st_json:
+            self.json_data = json.load(st_json)
+            
+        list_del = list()
+        for num in self.json_data:
+            if len(self.json_data[f"{num}"]['coordinates']) < 21 or len(self.json_data[f"{num}"]['visible']) < 21:
+                list_del.append(num)
+        for i in list_del:
+            del self.json_data[i]
+            
+        self.num = list(self.json_data)
+        
     def __len__(self):
-        return len(os.listdir(self.image_path))
+        return len(self.num)
 
     def __getitem__(self, idx):
         if not self.args.model == "ours":
             size = 256
         else:
             size = 224
-
-        with open(self.anno_path, "r") as st_json:
-            json_data = json.load(st_json)
-            joint = json_data[f"{idx}"]['coordinates']
-            pose_type = json_data[f"{idx}"]['pose_ctgy']
-            file_name = json_data[f"{idx}"]['file_name']
-            visible = json_data[f"{idx}"]['visible']
-            try: 
-                joint_2d = torch.tensor(joint)[:, :2]
-            except:
-                print(file_name)
-                print("EROOORROORR")
-            visible = torch.tensor(visible)
-            joint_2d_v = torch.concat([joint_2d, visible[:, None]], axis = 1)
-            assert len(joint) == 21, f"{file_name} have joint error"
-            assert len(visible) == 21, f"{file_name} have visible error"
+        idx = self.num[idx]
+        joint = self.json_data[f"{idx}"]['coordinates']
+        pose_type = self.json_data[f"{idx}"]['pose_ctgy']
+        file_name = self.json_data[f"{idx}"]['file_name']
+        visible = self.json_data[f"{idx}"]['visible']
+        try: 
+            joint_2d = torch.tensor(joint)[:, :2]
+        except:
+            print(file_name)
+            print("EROOORROORR")
+        visible = torch.tensor(visible)
+        joint_2d_v = torch.concat([joint_2d, visible[:, None]], axis = 1)
+        assert len(joint) == 21, f"{file_name} have joint error"
+        assert len(visible) == 21, f"{file_name} have visible error"
             
         trans = transforms.Compose([transforms.Resize((size, size)),
                                     transforms.ToTensor(),
@@ -259,10 +268,11 @@ def i_rotate(img, degree, move_x, move_y):
 
     centerRotatePT = int(w / 2), int(h / 2)
     new_h, new_w = h, w
-    translation = np.float32([[1, 0, move_x], [0, 1, move_y]])
+
     rotatefigure = cv2.getRotationMatrix2D(centerRotatePT, degree, 1)
     result = cv2.warpAffine(img, rotatefigure, (new_w, new_h),
                             flags=cv2.INTER_LINEAR, borderMode=cv2.INTER_LINEAR)
+    translation = np.float32([[1, 0, move_x], [0, 1, move_y]])
     result = cv2.warpAffine(result, translation, (new_w, new_h),
                             flags=cv2.INTER_LINEAR, borderMode=cv2.INTER_LINEAR)
 

@@ -43,8 +43,6 @@ def main(args):
             count += 1
             if count == args.count:
                 break
-        gc.collect()
-        torch.cuda.empty_cache()
   
 
 if __name__ == "__main__":
