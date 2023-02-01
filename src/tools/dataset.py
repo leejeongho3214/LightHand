@@ -82,17 +82,6 @@ class CustomDataset(Dataset):
             with open(f"{path}/revision_data.json", "r") as st_json:
                 self.meta = json.load(st_json)
                 self.meta = self.meta[: int(len(self.meta) * args.ratio_of_our)]
-
-        # self.meta = list() 
-        #  self.len = len(degrees)
-        # for num in degrees:
-        #     with open(f"{path}/{num}/annotations/train/CISLAB_train_data_update.json", "r") as st_json:
-        #         anno = json.load(st_json)
-        #     # anno = anno["images"][:int(len(anno["images"])* self.args.ratio_of_our)]
-        #     anno = anno["images"]
-        #     for idx in range(len(anno)):
-        #         anno[idx]["num"] = num
-        #     self.meta += anno   
     
     def __len__(self):
         return int(len(self.meta))     
@@ -104,7 +93,7 @@ class CustomDataset(Dataset):
         
         if self.phase == "train":
             num = self.meta[idx]["num"]
-            image = cv2.imread(os.path.join(self.path, num,"images/train" , name))   ## Color order of cv2 is BGR    
+            image = cv2.imread(os.path.join(self.path, num, "images/train" , name))   ## Color order of cv2 is BGR    
         else:
             image = cv2.imread(os.path.join(self.path, name))
         
@@ -117,12 +106,14 @@ class CustomDataset(Dataset):
             image_size = 224
             joint_multiply = 1
 
-        image = i_rotate(image, degrees, 0, move)
-        image = Image.fromarray(image)
-        joint_2d = torch.tensor(self.meta[idx]['rot_joint_2d']) * joint_multiply
-        
+        if self.phase == "train": 
+            image = i_rotate(image, degrees, 0, move)
+            joint_2d = torch.tensor(self.meta[idx]['rot_joint_2d']) * joint_multiply  
+        else:
+            joint_2d = torch.tensor(self.meta[idx]['joint_2d']) * joint_multiply
+            
+        image = Image.fromarray(image) 
         if idx < len(self.meta) * self.ratio_of_aug:
-
             trans = transforms.Compose([transforms.Resize((image_size, image_size)),
                                         transforms.ToTensor(),
                                         transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
@@ -135,8 +126,6 @@ class CustomDataset(Dataset):
         image = trans(image)
         
         heatmap = GenerateHeatmap(64, 21)(joint_2d / 4)
-            
-
 
         return image, joint_2d, heatmap
 
@@ -455,9 +444,7 @@ class Json_transform(Dataset):
             if flag:
                 continue
                     
-            rot_image = i_rotate(ori_image, degrees, 0, move_y + move_y2)
-            rot_image = Image.fromarray(rot_image)
-            
+
             j['joint_2d'] = d.tolist()
             j['joint_3d'] = joint.tolist()
             j['rot_joint_2d'] = joint_2d.tolist()

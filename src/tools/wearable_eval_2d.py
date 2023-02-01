@@ -19,7 +19,7 @@ def main(args):
     _, eval_dataset = build_dataset(args)
     testset_loader = data.DataLoader(dataset=eval_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
     print(len(eval_dataset))
-    model_path = "final_model"
+    model_path = "final_model/"
     model_list, pck_list = list(), list()
     for (root, _, files) in os.walk(model_path):
         for file in files:
@@ -35,8 +35,8 @@ def main(args):
         state_dict = torch.load(path_name)
         _model.load_state_dict(state_dict['model_state_dict'], strict=False)
         pred_store(args, testset_loader, _model, pbar)        
-        T_list = [0.1, 0.2]
-        pck, pbar = pred_eval(args, T_list, pbar)
+        T_list = [0, 30] ## this mean mm as a threshold
+        pck, pbar = pred_eval(args, T_list, pbar, "mm")
         pck_list.append([pck, args.name])
 
     pbar.close()
@@ -44,7 +44,7 @@ def main(args):
     f = open(f"pck_eval.txt", "w")
     for total_pck, name in pck_list:
         for p_type in total_pck:
-            f.write("{};{};{:.2f}\n".format(p_type, name, total_pck[p_type]))     ## category, model_name, auc
+            f.write("{};{};{:.2f};{:.2f}\n".format(p_type, name, total_pck[p_type][0], total_pck[p_type][1]/3.7795275591))     ## category, model_name, auc
     f.close()
     print(colored("Writting ===> %s" % os.path.join(os.getcwd(), f"pck_eval.txt")))
     

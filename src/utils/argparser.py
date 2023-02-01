@@ -122,9 +122,9 @@ def valid(args, train_dataloader, test_dataloader, Graphormer_model, epoch, coun
 
 def pred_store(args, dataloader, model, pbar):
     
-    # if os.path.isfile(os.path.join("final_model", args.name, "evaluation.json")):
-    #     pbar.update(len(dataloader)) 
-    #     return
+    if os.path.isfile(os.path.join("final_model", args.name, "evaluation.json")):
+        pbar.update(len(dataloader)) 
+        return
     
     meta = {'Standard':{"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Pinky': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Thumb': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Both': {"bb": [], "pred": [], "gt": []}}
     with torch.no_grad():
@@ -199,7 +199,7 @@ def pred_store_test(args, dataloader, model, pbar):
         dump(os.path.join("final_model", args.name, "test.json"), meta)
 
     
-def pred_eval(args, T_list, p_bar):
+def pred_eval(args, T_list, p_bar, method):
     
     pck_list = dict()
     
@@ -207,7 +207,11 @@ def pred_eval(args, T_list, p_bar):
         meta = json.load(fi)
         
     meta = meta[0]
-    thresholds_list = np.linspace(T_list[0], T_list[-1], 100)
+    if method == "mm":
+        thresholds_list = np.linspace(T_list[0], T_list[-1], 101)[1:] * 3.7795275591 ## change pixel coordinate to mm coordinate
+    elif method == "pckb":
+        thresholds_list = np.linspace(T_list[0], T_list[-1], 100)
+    else: assert 0, "this method is the wrong"
     thresholds = np.array(thresholds_list)
     norm_factor = np.trapz(np.ones_like(thresholds), thresholds)   
     total_pck = torch.empty(0)
@@ -218,8 +222,11 @@ def pred_eval(args, T_list, p_bar):
         gt = np.array(meta[p_type]["gt"])       ## batch_siez x 21 x 2
          
         diff = np.sqrt(np.sum(np.square(gt[:, :, :2] - pred[:, :, :2]), axis = -1))   ## 900 x 21
-        norm_diff = diff / bbox[:, None].repeat(21, axis = 1)
-        norm_diff = norm_diff[:, :, None]
+        if method == "pckb":
+            norm_diff = diff / bbox[:, None].repeat(21, axis = 1)
+            norm_diff = norm_diff[:, :, None]
+        else: norm_diff = diff[:, :, None]
+
         norm_diff = torch.concat([torch.tensor(norm_diff), torch.tensor(gt[:, :, -1][:, :, None])], dim = -1)
         norm_diff = norm_diff[norm_diff[:, :, 1] == 1][:, 0]
         
@@ -231,7 +238,7 @@ def pred_eval(args, T_list, p_bar):
         auc = np.trapz(pck_t, thresholds)
         auc /= (norm_factor + sys.float_info.epsilon)
         
-        pck_list["%s"%p_type] = auc
+        pck_list["%s"%p_type] = [auc, norm_diff.mean().item()]
         p_bar.update(1)
         
     total = len(total_pck)
@@ -239,19 +246,23 @@ def pred_eval(args, T_list, p_bar):
     pck_t = np.array(pck_t)
     auc = np.trapz(pck_t, thresholds)
     auc /= (norm_factor + sys.float_info.epsilon)
-    pck_list["mean_auc"] = auc
+    pck_list["mean_auc"] = [auc, total_pck.mean().item()]
         
     return pck_list, p_bar
 
 
-def pred_test(args, T_list, pbar):
+def pred_test(args, T_list, pbar, method):
 
 
     with open(os.path.join("final_model", args.name, "test.json"), 'r') as fi:
         meta = json.load(fi)
 
     meta = meta[0]
-    thresholds_list = np.linspace(T_list[0], T_list[-1], 100)
+    if method == "mm":
+        thresholds_list = np.linspace(T_list[0], T_list[-1], 101)[1:] * 3.7795275591 ## change pixel coordinate to mm coordinate
+    elif method == "pckb":
+        thresholds_list = np.linspace(T_list[0], T_list[-1], 100)
+    else: assert 0, "this method is the wrong"
     thresholds = np.array(thresholds_list)
     norm_factor = np.trapz(np.ones_like(thresholds), thresholds)   
 
@@ -264,9 +275,11 @@ def pred_test(args, T_list, pbar):
     pred = np.array([np.array(pred[i][j]) for i in range(len(pred)) for j in range(len(pred[i])) ])
   
     diff = np.sqrt(np.sum(np.square(gt - pred), axis = -1))   ## batch x 21
-    norm_diff = diff / bbox[:, None].repeat(21, axis = -1)
+    if method == "pckb":
+        norm_diff = diff / bbox[:, None].repeat(21, axis = 1)
+    else: norm_diff = diff
     norm_diff = norm_diff.flatten()
-    
+
     total = len(norm_diff)
     
     pck_t = [(len(norm_diff[norm_diff < T])/total) * 100 for T in thresholds_list]     ## calculate a pck according to each threshold that it has 100 values
@@ -276,4 +289,4 @@ def pred_test(args, T_list, pbar):
     auc /= (norm_factor + sys.float_info.epsilon)
     pbar.update(1)
         
-    return auc, pbar
+    return auc, diff.mean(), pbar

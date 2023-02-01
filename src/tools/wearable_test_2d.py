@@ -33,16 +33,17 @@ def main(args):
         _model, _, _, _, _ = load_model(args)
         state_dict = torch.load(path_name)
         _model.load_state_dict(state_dict['model_state_dict'], strict=False)
-        T_list = [0.1, 0.2]
+
         pred_store_test(args, testset_loader, _model, pbar)  
-        pck, pbar = pred_test(args, T_list, pbar)
-        pck_list.append([pck, args.name])
+        T_list = [0, 30] ## this mean mm as a threshold
+        pck, epe, pbar = pred_test(args, T_list, pbar, "mm")
+        pck_list.append([pck, epe, args.name])
 
     pbar.close()
     
     f = open(f"pck_test.txt", "w")
-    for auc, name in pck_list:
-        f.write("{};{:.2f}\n".format(name, auc))     ## category, model_name, auc
+    for auc, epe, name in pck_list:
+        f.write("{};{:.2f};{:.2f}\n".format(name, auc, epe / 3.7795275591))     ## category, model_name, auc
     f.close()
     print(colored("Writting ===> %s" % os.path.join(os.getcwd(), f"pck_test.txt")))
     
