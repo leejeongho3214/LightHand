@@ -420,14 +420,15 @@ class GAN(Dataset):
         
         return trans_image, joint_2d, heatmap
         
-    
+     
     
 def add_our(args, dataset, folder_num, path):
     from src.tools.dataset import CustomDataset
+    ratio  = (117216 * args.ratio_of_other) / 1375570
+
+     ## it divides the length of dataset into totla_len
     for iter, degree in enumerate(folder_num):
-        ratio  = (len(dataset) * args.ratio_of_other) / 1528415     ## it divides the length of dataset into totla_len
-        dataset = CustomDataset(args, degree, path, color=args.color,
-                                ratio_of_aug=args.ratio_of_aug, ratio_of_dataset= ratio)
+        dataset = CustomDataset(args, degree, path, ratio_of_dataset= ratio)
 
         if iter == 0:
             train_dataset, test_dataset = random_split(

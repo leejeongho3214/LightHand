@@ -11,7 +11,7 @@ import torch
 from src.utils.dataset_loader import Dataset_interhand, STB, RHD, GAN, GenerateHeatmap, add_our, our_cat
 import os.path as op
 import random
-from torch.utils.data import random_split
+from torch.utils.data import random_split, ConcatDataset
 import cv2
 import numpy as np
 from torch.utils.data import Dataset
@@ -47,8 +47,14 @@ def build_dataset(args):
     elif args.dataset == "frei":            ## Frei don't provide 2d anno in valid-set
         dataset = make_hand_data_loader(                
             args, args.train_yaml,  is_train=True)                                
+        eval_path = "/".join(path.split('/')[:-1]) + "/annotations/evaluation"
+        train_dataset1 = CustomDataset(args,  path, "train")
+        test_dataset1 = val_set(args , eval_path, "val")
         ## This function's name is random_split but i change it to split the dataset by sqeuntial order
-        train_dataset, test_dataset = random_split(dataset, [int(len(dataset) * 0.9), len(dataset) - (int(len(dataset) * 0.9))])       
+        train_dataset2, test_dataset2 = random_split(dataset, [int(len(dataset) * 0.9), len(dataset) - (int(len(dataset) * 0.9))]) 
+        
+        train_dataset = ConcatDataset([train_dataset1, train_dataset2])
+        test_dataset = ConcatDataset([test_dataset1, test_dataset2])
  
     elif args.dataset == "rhd":
         train_dataset = RHD(args, "train")
@@ -58,8 +64,7 @@ def build_dataset(args):
         train_dataset = STB(args)
         test_dataset = STB(args)
         
-        # train_dataset, test_dataset = add_our(args, dataset, folder_num, path) 
-        
+
     elif args.dataset == "gan":
         dataset = GAN(args)     # same reason as above
         train_dataset, test_dataset = random_split(dataset, [int(len(dataset) * 0.9), len(dataset) - (int(len(dataset) * 0.9))])
@@ -84,7 +89,10 @@ class CustomDataset(Dataset):
                 self.meta = self.meta[: int(len(self.meta) * args.ratio_of_our)]
     
     def __len__(self):
-        return int(len(self.meta))     
+        if self.phase == 'train':
+            return int((self.args.ratio_of_other) * 117000)     
+        else:   
+            return int((self.args.ratio_of_other) * 11700)    
 
     def __getitem__(self, idx):
         name = self.meta[idx]['file_name']
@@ -117,12 +125,14 @@ class CustomDataset(Dataset):
             trans = transforms.Compose([transforms.Resize((image_size, image_size)),
                                         transforms.ToTensor(),
                                         transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
-                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                                        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])])
     
         else:
             trans = transforms.Compose([transforms.Resize((image_size, image_size)),
                                         transforms.ToTensor(),
-                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                                        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])])
         image = trans(image)
         
         heatmap = GenerateHeatmap(64, 21)(joint_2d / 4)
