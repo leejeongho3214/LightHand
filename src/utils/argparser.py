@@ -128,7 +128,8 @@ def pred_store(args, dataloader, model, pbar):
     
     meta = {'Standard':{"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Pinky': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Thumb': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Both': {"bb": [], "pred": [], "gt": []}}
     with torch.no_grad():
-        for (images, gt_2d_joints, anno) in dataloader:
+        for (images, gt_2d_joints, annos) in dataloader:
+            anno, idx = annos
             bbox_size = list()
             images = images.cuda()
             pred_2d_joints = model(images)
@@ -137,12 +138,12 @@ def pred_store(args, dataloader, model, pbar):
             pred_joint = pred_joint * 4  ## heatmap resolution was 64 x 64 so multiply 4 to make it 256 x 256
             pred_joint = torch.tensor(pred_joint)
     
-            if args.plt:
-                for i in range(images.size(0)):
-                    fig = plt.figure()
-                    visualize_gt(images, gt_2d_joints, fig, 0)
-                    visualize_pred(images, pred_joint, fig, 'evaluation', 0, i, args, anno)
-                    plt.close()
+            # for i in idx:
+            #     i = int(i)
+            #     fig = plt.figure()
+            #     visualize_gt(images, gt_2d_joints, fig, i)
+            #     visualize_pred(images, pred_joint, fig, 'evaluation', i, i, args, anno)
+            #     plt.close()
             
             for j in gt_2d_joints:
                 width = max(j[:,0]) - min(j[:,0])
@@ -232,21 +233,21 @@ def pred_eval(args, T_list, p_bar, method):
         
         total_pck = torch.concat([norm_diff, total_pck])
         total = len(norm_diff)
-        pck_t = [(len(norm_diff[norm_diff < T])/total) * 100 for T in thresholds_list]     ## calculate a pck according to each threshold that it has 100 values
+        pck_t = [(len(norm_diff[norm_diff < T])/total) * 100 for T in thresholds_list]     ## Compute a PCK for each threshold with 100 values
         pck_t = np.array(pck_t)
         
         auc = np.trapz(pck_t, thresholds)
         auc /= (norm_factor + sys.float_info.epsilon)
         
-        pck_list["%s"%p_type] = [auc, norm_diff.mean().item()]
+        pck_list["%s"%p_type] = [auc, norm_diff.mean().item(), pck_t]
         p_bar.update(1)
         
     total = len(total_pck)
-    pck_t = [(len(total_pck[total_pck < T])/total) * 100 for T in thresholds_list]     ## calculate a pck according to each threshold that it has 100 values
+    pck_t = [(len(total_pck[total_pck < T])/total) * 100 for T in thresholds_list]     ## Compute a PCK for each threshold with 100 values
     pck_t = np.array(pck_t)
     auc = np.trapz(pck_t, thresholds)
     auc /= (norm_factor + sys.float_info.epsilon)
-    pck_list["mean_auc"] = [auc, total_pck.mean().item()]
+    pck_list["mean_auc"] = [auc, total_pck.mean().item(), pck_t]
         
     return pck_list, p_bar
 

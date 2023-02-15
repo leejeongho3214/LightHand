@@ -29,8 +29,9 @@ def visualize_pred(images, pred_2d_joint, fig, method = None, epoch = 0, iterati
     ax1.axis("off")
     
     if method == 'evaluation':
-        if not os.path.isdir("eval_image"): mkdir("eval_image")
-        plt.savefig(os.path.join("eval_image", f'iter_{iteration}.jpg'))
+        a = '/'.join(args.output_dir.split('/')[:-2])
+        if not os.path.isdir(f"eval_image/{a})"): mkdir(f"eval_image/{a}")
+        plt.savefig(os.path.join(f"eval_image/{a}", f'{iteration}.jpg'))
         # dataset_name = dataset_name[num]
         # if iteration == 0 and epoch == 0:
         #     reset_folder(f'eval_image/{args.name[13:-31]}/{dataset_name}')

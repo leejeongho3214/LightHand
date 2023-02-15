@@ -189,10 +189,12 @@ class test_set(Dataset):
 class eval_set(Dataset):
     def __init__(self, args):
         self.args = args
-        self.image_path = f'../../datasets/test/rgb'
-        self.anno_path = f'../../datasets/test/annotations.json'
+        self.image_path = f'../../datasets/testset/rgb'
+        self.anno_path = f'../../datasets/testset/annotations.json'
         self.list = os.listdir(self.image_path)
         with open(self.anno_path, "r") as st_json:
+            self.json_data = json.load(st_json)
+        with open('../../datasets/testset/annotations.json', "r") as st_json:
             self.json_data = json.load(st_json)
             
         list_del = list()
@@ -208,10 +210,6 @@ class eval_set(Dataset):
         return len(self.num)
 
     def __getitem__(self, idx):
-        if not self.args.model == "ours":
-            size = 256
-        else:
-            size = 224
         idx = self.num[idx]
         joint = self.json_data[f"{idx}"]['coordinates']
         pose_type = self.json_data[f"{idx}"]['pose_ctgy']
@@ -227,18 +225,18 @@ class eval_set(Dataset):
         assert len(joint) == 21, f"{file_name} have joint error"
         assert len(visible) == 21, f"{file_name} have visible error"
             
-        trans = transforms.Compose([transforms.Resize((size, size)),
+        trans = transforms.Compose([transforms.Resize((256, 256)),
                                     transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         
         image = Image.open(f"../../datasets/{file_name}")
         trans_image = trans(image)
-        joint_2d_v[:, 0] = joint_2d_v[:, 0] * image.width
-        joint_2d_v[:, 1] = joint_2d_v[:, 1] * image.height
-        joint_2d[:, 0] = joint_2d[:, 0] * image.width
-        joint_2d[:, 1] = joint_2d[:, 1] * image.height
+        joint_2d_v[:, 0] = joint_2d_v[:, 0] * 256
+        joint_2d_v[:, 1] = joint_2d_v[:, 1] * 256
+        joint_2d[:, 0] = joint_2d[:, 0] * 256
+        joint_2d[:, 1] = joint_2d[:, 1] * 256
             
-        return trans_image, joint_2d_v, pose_type
+        return trans_image, joint_2d_v, [pose_type, idx]
 
 
 class AverageMeter(object):
