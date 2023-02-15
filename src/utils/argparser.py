@@ -21,7 +21,7 @@ from src.utils.loss import *
 from src.utils.geometric_layers import *
 from src.utils.visualize import *
 
-def parse_args():
+def parse_args(name):
     parser = argparse.ArgumentParser()
     
     parser.add_argument("name", default='None',
@@ -56,6 +56,7 @@ def parse_args():
                         help="If you write down, The output of model would be 3d joint coordinate")
     
     args = parser.parse_args()
+    args.name = name
     args, logger = pre_arg(args)
     args.logger = logger
     
