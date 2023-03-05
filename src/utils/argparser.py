@@ -88,21 +88,21 @@ def load_model(args):
                 if True if input("There is resume_point but do you want to delete?") == "o" else False:
                     reset_folder(log_dir); reset_folder(os.path.join(args.root_path, args.name)); 
                     print(colored("Ignore the check-point model", "green"))
-                    args.reset = "resume but init"
+                    msg = "resume but init"
             else:
-                args.reset = "init"
+                msg = "init"
         else: 
             if os.path.isfile(os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin')):
                 best_loss, epoch, _model, count = resume_checkpoint(_model, os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin'))
                 args.logger.debug("Loading ===> %s" % os.path.join(args.root_path, args.name))
                 print(colored("Loading ===> %s" % os.path.join(args.root_path, args.name), "green"))
-                args.reset = "resume"
+                msg = "resume"
             else:
-                reset_folder(log_dir); args.reset = "init"
+                reset_folder(log_dir); msg = "init"
      
     _model.to(args.device)
     
-    return _model, best_loss, epoch, count, writer
+    return _model, best_loss, epoch, count, writer, msg
 
 
 
@@ -122,9 +122,9 @@ def valid(args, train_dataloader, test_dataloader, Graphormer_model, epoch, coun
 
 def pred_store(args, dataloader, model, pbar):
     
-    if os.path.isfile(os.path.join("final_model", args.name, "evaluation.json")):
-        pbar.update(len(dataloader)) 
-        return
+    # if os.path.isfile(os.path.join("final_model", args.name, "evaluation.json")):
+    #     pbar.update(len(dataloader)) 
+    #     return
     
     meta = {'Standard':{"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Pinky': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Thumb': {"bb": [], "pred": [], "gt": []}, 'Occlusion_by_Both': {"bb": [], "pred": [], "gt": []}}
     with torch.no_grad():
@@ -213,6 +213,7 @@ def pred_eval(args, T_list, p_bar, method):
     elif method == "pckb":
         thresholds_list = np.linspace(T_list[0], T_list[-1], 100)
     else: assert 0, "this method is the wrong"
+    
     thresholds = np.array(thresholds_list)
     norm_factor = np.trapz(np.ones_like(thresholds), thresholds)   
     total_pck = torch.empty(0)

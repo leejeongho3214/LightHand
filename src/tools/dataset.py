@@ -57,7 +57,7 @@ def build_dataset(args):
     elif args.dataset == "stb":
         train_dataset = STB(args)
         test_dataset = STB(args)
-        
+
         # train_dataset, test_dataset = add_our(args, dataset, folder_num, path) 
         
     elif args.dataset == "gan":
