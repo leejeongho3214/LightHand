@@ -49,5 +49,27 @@ def main(args):
   
 
 if __name__ == "__main__":
-    args= parse_args()
+    name = "simplebaseline/frei/10"
+    args= parse_args(name)
+    args.ratio_of_other = 0.1
+    main(args)
+    
+    args.name = "simplebaseline/frei/20"
+    args.ratio_of_other = 0.2
+    main(args)
+    
+    args.name = "simplebaseline/frei/30"
+    args.ratio_of_other = 0.3
+    main(args)
+
+    args.name = "simplebaseline/frei/40"
+    args.ratio_of_other = 0.4
+    main(args)
+    
+    args.name = "simplebaseline/frei/50"
+    args.ratio_of_other = 0.5
+    main(args)
+    
+    args.name = "simplebaseline/frei/60"
+    args.ratio_of_other = 0.6
     main(args)

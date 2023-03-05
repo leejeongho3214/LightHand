@@ -21,7 +21,7 @@ from src.utils.loss import *
 from src.utils.geometric_layers import *
 from src.utils.visualize import *
 
-def parse_args():
+def parse_args(name):
     parser = argparse.ArgumentParser()
     
     parser.add_argument("name", default='None',
@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument("--ratio_of_our", default=0.3, type=float,
                         help="Our dataset have 420k imaegs so you can use train data as many as you want, according to this ratio")
     parser.add_argument("--ratio_of_other", default=0.3, type=float)
-    parser.add_argument("--ratio_of_aug", default=0.2, type=float,
+    parser.add_argument("--ratio_of_aug", default=0.6, type=float,
                         help="You can use color jitter to train data as many as you want, according to this ratio")
     parser.add_argument("--epoch", default=50, type=int)
     
@@ -56,6 +56,7 @@ def parse_args():
                         help="If you write down, The output of model would be 3d joint coordinate")
     
     args = parser.parse_args()
+    args.name = name
     args, logger = pre_arg(args)
     args.logger = logger
     
