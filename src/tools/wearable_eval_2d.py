@@ -19,7 +19,7 @@ def main(args):
     _, eval_dataset = build_dataset(args)
     testset_loader = data.DataLoader(dataset=eval_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
     print(len(eval_dataset))
-    model_path = "final_model/simplebaseline/frei"
+    model_path = "final_model/simplebaseline"
     model_list= list()
     for (root, _, files) in os.walk(model_path):
         for file in files:
@@ -47,7 +47,7 @@ def main(args):
         f = open(f"pck_eval_{t_type}_{T_list[1]}.txt", "w")
         for total_pck, name in pck_list:
             for p_type in total_pck:
-                f.write("{};{};{:.2f};{:.2f};".format(p_type, name, total_pck[p_type][0], total_pck[p_type][1]/3.7795275591))   ## category, model_name, auc
+                f.write("{};{};{:.2f};{:.2f};".format(p_type, name, total_pck[p_type][0], total_pck[p_type][1]))   ## category, model_name, auc, epe
                 for idx, pck in enumerate(total_pck[p_type][2]):
                     f.write("{:.2f};".format(pck))
                     if idx == len(total_pck[p_type][2])-1: f.write("\n".format(pck))

@@ -18,34 +18,35 @@ def main(args):
     args.test = True
     _, test_dataset = build_dataset(args)
     testset_loader = data.DataLoader(dataset=test_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
-    model_path = "final_model"
-    model_list = list()
+    model_path = "final_model/simplebaseline"
+    model_list= list()
     for (root, _, files) in os.walk(model_path):
         for file in files:
             if '.bin' in file:
                 model_list.append(os.path.join(root, file))
-    pck_list = list()            
-    pbar = tqdm(total = len(model_list) * (len(testset_loader) + 14))
-    for path_name in model_list:
-        args.model = path_name.split('/')[1]
-        args.name = ('/').join(path_name.split('/')[1:-2])
-        args.output_dir = path_name
-        _model, _, _, _, _ = load_model(args)
-        state_dict = torch.load(path_name)
-        _model.load_state_dict(state_dict['model_state_dict'], strict=False)
+           
+    aa = [['pckb', [0.1, 0.2]], ['mm', [0, 3]], ['mm', [0, 5]]]
+    for t_type, T_list in aa:            
+        pck_list = list()            
+        pbar = tqdm(total = len(model_list) * (len(testset_loader) + 14))
+        for path_name in model_list:
+            args.model = path_name.split('/')[1]
+            args.name = ('/').join(path_name.split('/')[1:-2])
+            args.output_dir = path_name
+            _model, _, _, _, _, msg = load_model(args)
+            state_dict = torch.load(path_name)
+            _model.load_state_dict(state_dict['model_state_dict'], strict=False)
+            pred_store_test(args, testset_loader, _model, pbar)  
+            pck, epe, pbar = pred_test(args, T_list, pbar, 'pckb')
+            pck_list.append([pck, epe, args.name])
 
-        pred_store_test(args, testset_loader, _model, pbar)  
-        T_list = [0, 30] ## this mean mm as a threshold
-        pck, epe, pbar = pred_test(args, T_list, pbar, "mm")
-        pck_list.append([pck, epe, args.name])
-
-    pbar.close()
-    
-    f = open(f"pck_test.txt", "w")
-    for auc, epe, name in pck_list:
-        f.write("{};{:.2f};{:.2f}\n".format(name, auc, epe / 3.7795275591))     ## category, model_name, auc
-    f.close()
-    print(colored("Writting ===> %s" % os.path.join(os.getcwd(), f"pck_test.txt")))
+        pbar.close()
+        
+        f = open(f"pck_test_{t_type}_{T_list[1]}.txt", "w")
+        for auc, epe, name in pck_list:
+            f.write("{};{:.2f};{:.2f}\n".format(name, auc, epe / 3.7795275591))     ## category, model_name, auc
+        f.close()
+        print(colored("Writting ===> %s" % os.path.join(os.getcwd(), f"pck_test.txt")))
     
 
 if __name__ == "__main__":

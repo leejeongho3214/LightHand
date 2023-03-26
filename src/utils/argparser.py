@@ -163,9 +163,9 @@ def pred_store(args, dataloader, model, pbar):
         
 def pred_store_test(args, dataloader, model, pbar):
     
-    if os.path.isfile(os.path.join("final_model", args.name, "test.json")):
-        pbar.update(len(dataloader))
-        return
+    # if os.path.isfile(os.path.join("final_model", args.name, "test.json")):
+    #     pbar.update(len(dataloader))
+    #     return
     
     meta = {"pred": [], "gt": [], 'bb': []}
 
@@ -218,6 +218,7 @@ def pred_eval(args, T_list, p_bar, method):
     thresholds = np.array(thresholds_list)
     norm_factor = np.trapz(np.ones_like(thresholds), thresholds)   
     total_pck = torch.empty(0)
+    total_epe = np.zeros([971, 21])
     
     for p_type in meta:
         bbox = np.array(meta[p_type]["bb"])     ## each bounding box's dianogal length
@@ -233,6 +234,7 @@ def pred_eval(args, T_list, p_bar, method):
         norm_diff = torch.concat([torch.tensor(norm_diff), torch.tensor(gt[:, :, -1][:, :, None])], dim = -1)
         norm_diff = norm_diff[norm_diff[:, :, 1] == 1][:, 0]
         
+        total_epe = np.concatenate([total_epe, diff], axis = 0)
         total_pck = torch.concat([norm_diff, total_pck])
         total = len(norm_diff)
         pck_t = [(len(norm_diff[norm_diff < T])/total) * 100 for T in thresholds_list]     ## Compute a PCK for each threshold with 100 values
@@ -241,7 +243,7 @@ def pred_eval(args, T_list, p_bar, method):
         auc = np.trapz(pck_t, thresholds)
         auc /= (norm_factor + sys.float_info.epsilon)
         
-        pck_list["%s"%p_type] = [auc, norm_diff.mean().item(), pck_t]
+        pck_list["%s"%p_type] = [auc, diff.mean().item() / 3.7795275591, pck_t]
         p_bar.update(1)
         
     total = len(total_pck)
@@ -249,7 +251,7 @@ def pred_eval(args, T_list, p_bar, method):
     pck_t = np.array(pck_t)
     auc = np.trapz(pck_t, thresholds)
     auc /= (norm_factor + sys.float_info.epsilon)
-    pck_list["mean_auc"] = [auc, total_pck.mean().item(), pck_t]
+    pck_list["mean_auc"] = [auc, total_epe.mean() / 3.7795275591, pck_t]
         
     return pck_list, p_bar
 

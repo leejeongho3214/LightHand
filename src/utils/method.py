@@ -139,10 +139,7 @@ class Runner(object):
                 eta_seconds = self.batch_time.avg * ((self.len_total - iteration) + (self.args.epoch - self.epoch -1) * self.len_total)  
 
                 self.train_log(iteration, eta_seconds, end)
-                if iteration == len(self.train_loader) - 1:
-                   self. writer.add_scalar("Loss/train", self.log_losses.avg, self.epoch)
-                # if iteration % 100 == 99:
-                #     self.writer.add_scalar(f"Loss/train/{self.epoch}_epoch", self.log_losses.avg, iteration)
+            self.writer.add_scalar("Loss/train", self.log_losses.avg, self.epoch)
             return self.model, self.optimizer, self.batch_time
 
         else:
@@ -179,9 +176,9 @@ class Runner(object):
                     eta_seconds = self.batch_time.avg * ((len(self.valid_loader) - iteration) + (self.args.epoch - self.epoch -1) * self.len_total)  
 
                     self.test_log(iteration, eta_seconds, end)
-                    if iteration == len(self.valid_loader) - 1:
-                        self.writer.add_scalar("Loss/valid", self.log_losses.avg, self.epoch)
-                        
+                
+                self.writer.add_scalar("Loss/valid", self.log_losses.avg, self.epoch)
+                    
                 return self.log_losses.avg, self.count, self.pck_losses.avg * 100, self.batch_time 
             
             

@@ -18,8 +18,8 @@ def main(args):
     
     trainset_loader = data.DataLoader(dataset=train_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
     testset_loader = data.DataLoader(dataset=test_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
-
-    _model, best_loss, epo, count, writer = load_model(args)
+    
+    _model, best_loss, epo, count, writer, _ = load_model(args)
     pck_l = 0; batch_time = AverageMeter()
     d_type = "3D" if args.D3 else "2D"
     
@@ -49,27 +49,24 @@ def main(args):
   
 
 if __name__ == "__main__":
-    name = "simplebaseline/frei/10"
+    name = "simplebaseline/ours/d_0.1_a_0.3"
     args= parse_args(name)
-    args.ratio_of_other = 0.1
+    args.ratio_of_aug = 0.3
     main(args)
     
-    args.name = "simplebaseline/frei/20"
-    args.ratio_of_other = 0.2
+    name = "simplebaseline/ours/d_0.1_a_0.4"
+    args= parse_args(name)
+    args.ratio_of_aug = 0.4
     main(args)
     
-    args.name = "simplebaseline/frei/30"
-    args.ratio_of_other = 0.3
+    name = "simplebaseline/ours/d_0.1_a_0.5"
+    args= parse_args(name)
+    args.ratio_of_aug = 0.5
+    main(args)
+    
+    name = "simplebaseline/ours/d_0.1_a_0.6"
+    args= parse_args(name)
+    args.ratio_of_aug = 0.6
     main(args)
 
-    args.name = "simplebaseline/frei/40"
-    args.ratio_of_other = 0.4
-    main(args)
     
-    args.name = "simplebaseline/frei/50"
-    args.ratio_of_other = 0.5
-    main(args)
-    
-    args.name = "simplebaseline/frei/60"
-    args.ratio_of_other = 0.6
-    main(args)
