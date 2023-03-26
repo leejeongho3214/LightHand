@@ -16,28 +16,22 @@ Build as the below architecture
 ```
 
 ## Models
-```
-cd {$ROOT}
-cp -r /home/jeongho/tmp/armo_pose_estimation/models .
-```
+You can download these models through the below link.
 
-## datasets
-Choose the dataset name you want
-ex. name in freihand, ArmoHnad, etc.
-```
-cd {$ROOT}
-mkdir datasets
-cp -r /home/jeongho/tmp/Wearable_Pose_Model/datasets/{name} datasets/
-```
+
+## Datasets
+You can download these models through the below link.
+It consist of ArmoHAND, FreiHAND and RHD dataset
+
 
 ## Train
 ```
 cd {$ROOT}/src/tools
 python model-name/dataset-name/name
-ex. python hrnet/frei/2d
+ex) python hrnet/frei/2d
 ```
 
-## args
+## Args
 you can change the epoch, count, init through arg command line
 ex. python hrnet/frei/2d --epoch 100 --count 5 --reset
 
