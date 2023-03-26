@@ -3,7 +3,6 @@
 *.png
 *.pyc
 pred*.json
-*.ipynb
 /models
 __pycache__/
 .DS_Store
