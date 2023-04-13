@@ -48,22 +48,10 @@ def main(args):
   
 
 if __name__ == "__main__":
-    name = "simplebaseline/ours/d_0.3_a_0.3"
+    name = "simplebaseline/frei/add_0.8"
     args= parse_args(name)
-    args.ratio_of_aug = 0.3
+    args.count = 5
+    args.ratio_of_our = 0.1
+    args.ratio_of_other = 0.8
     main(args)
     
-    name = "simplebaseline/ours/d_0.3_a_0.4"
-    args= parse_args(name)
-    args.ratio_of_aug = 0.4
-    main(args)
-    
-    name = "simplebaseline/ours/d_0.3_a_0.5"
-    args= parse_args(name)
-    args.ratio_of_aug = 0.5
-    main(args)
-    
-    name = "simplebaseline/ours/d_0.3_a_0.6"
-    args= parse_args(name)
-    args.ratio_of_aug = 0.6
-    main(args)

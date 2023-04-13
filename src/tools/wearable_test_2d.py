@@ -42,9 +42,10 @@ def main(args):
 
         pbar.close()
         
-        f = open(f"pck_test_{t_type}_{T_list[1]}.txt", "w")
+        f = open(f"{args.model}_pck_test_{t_type}_{T_list[1]}.txt", "w")
         for auc, epe, name in pck_list:
             f.write("{};{:.2f};{:.2f}\n".format(name, auc, epe / 3.7795275591))     ## category, model_name, auc
+            
         f.close()
         print(colored("Writting ===> %s" % os.path.join(os.getcwd(), f"pck_test.txt")))
     
