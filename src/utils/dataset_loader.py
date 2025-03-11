@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import scipy.io as sio
 from src.utils.transforms import world2cam, cam2pixel
 from src.utils.preprocessing import load_skeleton, process_bbox
-from pycocotools.coco import COCO
+# from pycocotools.coco import COCO
 from torch.utils.data import Dataset
 import json
 import numpy as np

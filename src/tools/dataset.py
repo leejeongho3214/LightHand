@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath(
 
 
 def build_dataset(args):
-    path = "../../datasets/ArmHand"
+    path = "../../dataset/LightHand"
 
     if args.eval:
         test_dataset = eval_set(args)
@@ -71,7 +71,7 @@ def build_dataset(args):
 
     elif args.dataset == "ours":
         train_dataset = CustomDataset(args,  path, "train")
-        eval_dataset = val_set(args, path, "val")
+        eval_dataset = val_set(args, path, "eval")
 
     return train_dataset, eval_dataset
 
@@ -83,48 +83,26 @@ class CustomDataset(Dataset):
         self.phase = phase
         self.ratio_of_aug = args.ratio_of_aug
         
-        self.bg_path = "../../datasets/ArmHand/background"
-        self.bg_list = os.listdir(self.bg_path)
-        self.bg_len = len(self.bg_list)
-        if phase == "train":
-            with open(f"{path}/annotations/{phase}/{args.ratio_of_our}M_revision_data.pkl", "rb") as st_json:
-                self.meta = pickle.load(st_json)
+        with open(f"{path}/annotations/{phase}/CISLAB_{phase}_data.json", "rb") as st_json:
+            self.meta = json.load(st_json)
 
     def __len__(self):
-        return int(len(self.meta) * self.args.ratio_of_other)
+        return self.args.num_our
 
     def __getitem__(self, idx):
-        name = '/'.join(self.meta[idx]['file_name'].split("/")[1:])
-        move = self.meta[idx]['move']
-        degrees = self.meta[idx]['degree']
-
-        if self.phase == "train":
-            num = self.meta[idx]["angle"]
-            # Color order of cv2 is BGR
-            image = cv2.imread(os.path.join(
-                self.path, "images/train", 'wrist_angles', num, name))
-        else:
-            image = cv2.imread(os.path.join(self.path, name))
-
+        name = self.meta[idx]['file_name']
+            
+        image = cv2.imread(os.path.join(self.path, name))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_size = 256
         
-        rot_image = i_rotate(image, degrees, 0, move)
         joint_2d = torch.tensor(
             self.meta[idx]['joint_2d']) * (256/512)
 
-        bg_img = cv2.imread(os.path.join(self.bg_path, self.bg_list[idx%self.bg_len]))
-        bg_img = cv2.cvtColor(bg_img, cv2.COLOR_BGR2RGB)
-        bg_img = cv2.resize(bg_img, (512, 512))
-        
-        index = np.where((rot_image[:, :, 0] == 0) & (rot_image[:, :, 1] == 0) & (rot_image[:, :, 2] == 0))
-        rot_image[index] = bg_img[index]
-
-        image = Image.fromarray(rot_image)
         if idx < len(self.meta) * self.ratio_of_aug:
             trans = transforms.Compose([
-                transforms.Resize((image_size, image_size)),
                 transforms.ToTensor(),
+                transforms.Resize((image_size, image_size)),
                 transforms.ColorJitter(
                     brightness=0.5, contrast=0.5, saturation=0.5, hue=0.5),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
@@ -133,8 +111,8 @@ class CustomDataset(Dataset):
 
         else:
             trans = transforms.Compose([
-                transforms.Resize((image_size, image_size)),
                 transforms.ToTensor(),
+                transforms.Resize((image_size, image_size)),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
                                      0.229, 0.224, 0.225])
             ])
@@ -150,9 +128,12 @@ class val_set(CustomDataset):
         super().__init__(*args)
         self.ratio_of_aug = 0
         self.args.ratio_of_dataset = 1
-        with open(os.path.join(f"{self.path}/annotations/{self.phase}", "revision_data.pkl"), "rb") as st_json:
-            self.meta = pickle.load(st_json)
+        with open(os.path.join(f"{self.path}/annotations/{self.phase}", f"CISLAB_{self.phase}_data.json"), "rb") as st_json:
+            self.meta = json.load(st_json)
         self.path = os.path.join(self.path, "images/val")
+        
+    def __len__(self):
+        return -1
 
 
 class test_set(Dataset):
@@ -171,12 +152,10 @@ class test_set(Dataset):
 class eval_set(Dataset):
     def __init__(self, args):
         self.args = args
-        self.image_path = f'../../datasets/test/rgb'
-        self.anno_path = f'../../datasets/test/annotations.json'
+        self.image_path = f'../../dataset/Armo_hand_dataset/rgb'
+        self.anno_path = f'../../dataset/Armo_hand_dataset/annotations.json'
         self.list = os.listdir(self.image_path)
         with open(self.anno_path, "r") as st_json:
-            self.json_data = json.load(st_json)
-        with open('../../datasets/test/annotations.json', "r") as st_json:
             self.json_data = json.load(st_json)
 
         list_del = list()
@@ -215,9 +194,8 @@ class eval_set(Dataset):
                                     transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-        image = Image.open(f"../../datasets/{file_name}")
+        image = Image.open(f"../../dataset/Armo_hand_dataset/rgb/{self.json_data[f'{idx}']['image_id']}.jpg")
         trans_image = trans(image)
-        if self.args.model == 'mediapipe': trans_image = f"../../datasets/{file_name}"
         joint_2d_v[:, 0] = joint_2d_v[:, 0] * img_size
         joint_2d_v[:, 1] = joint_2d_v[:, 1] * img_size
         joint_2d[:, 0] = joint_2d[:, 0] * img_size

@@ -1,11 +1,6 @@
-import mediapipe as mp
 import os
 import sys
 from tqdm import tqdm
-
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
-os.environ["CUDA_VISIBLE_DEVICES"]= "0" 
-os.environ["TF_ENABLE_ONEDNN_OPTS"]="0"
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
@@ -19,7 +14,7 @@ def main():
     _, eval_dataset = build_dataset(args)
     testset_loader = data.DataLoader(dataset=eval_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
     print(len(eval_dataset))
-    model_path = "final_model/simplebaseline/ours"
+    model_path = "output/simplebaseline/ours"
     model_list= list()
     for (root, _, files) in os.walk(model_path):
         for file in files:
@@ -32,18 +27,12 @@ def main():
         pbar = tqdm(total = len(model_list) * (len(testset_loader) + 4))           ## 4 means a number of category in pred_eval
         pck_list = list()
         for path_name in model_list:
-            path_name = "ours/mediapipe/test/inf"
             args.model = path_name.split('/')[1]
-            if args.model == 'mediapipe':
-                _model = None
-                args.name = 'mediapipe/test'
-
-            else:    
-                args.name = ('/').join(path_name.split('/')[1:-2])
-                args.output_dir = path_name
-                _model, _, _, _, _, msg = load_model(args)
-                state_dict = torch.load(path_name)
-                _model.load_state_dict(state_dict['model_state_dict'], strict=False)
+            args.name = ('/').join(path_name.split('/')[1:-2])
+            args.output_dir = path_name
+            _model, _, _, _, _, msg = load_model(args)
+            state_dict = torch.load(path_name)
+            _model.load_state_dict(state_dict['model_state_dict'], strict=False)
                 
             pred_store(args, testset_loader, _model, pbar)        
             # T_list = [0, 30] ## this mean mm as a threshold

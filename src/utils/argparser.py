@@ -3,7 +3,6 @@ import os
 import sys
 import argparse
 
-import mediapipe as mp
 from src.utils.bar import colored
 from src.utils.pre_argparser import pre_arg
 from src.modeling.simplebaseline.config import config as config_simple
@@ -26,7 +25,7 @@ from src.utils.visualize import *
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("name", default='None',
+    parser.add_argument("--name", default='simplebaseline/ours',
                         help='You write down to store the directory path', type=str)
     parser.add_argument("--root_path", default=f'output', type=str, required=False,
                         help="The root directory to save location which you want")
@@ -34,17 +33,14 @@ def parse_args():
     parser.add_argument("--dataset", default='ours', type=str, required=False)
     parser.add_argument("--view", default='wrist', type=str, required=False)
     parser.add_argument("--batch_size", default=32, type=int)
-    parser.add_argument("--count", default=5, type=int)
-    parser.add_argument("--ratio_of_our", default=0.3, type=float,
+    parser.add_argument("--count", default=10, type=int)
+    parser.add_argument("--num_our", default=84000, type=int,
                         help="Our dataset have 420k imaegs so you can use train data as many as you want, according to this ratio")
     parser.add_argument("--ratio_of_other", default=0, type=float)
     parser.add_argument("--ratio_of_aug", default=0.6, type=float,
                         help="You can use color jitter to train data as many as you want, according to this ratio")
     parser.add_argument("--epoch", default=50, type=int)
 
-    parser.add_argument("--loss_2d", default=0, type=float)
-    parser.add_argument("--loss_3d", default=1, type=float)
-    parser.add_argument("--loss_3d_mid", default=0, type=float)
     parser.add_argument("--scale", action='store_true')
     parser.add_argument("--plt", action='store_true')
     parser.add_argument("--eval", action='store_true')
@@ -58,7 +54,6 @@ def parse_args():
                         help="If you write down, The output of model would be 3d joint coordinate")
 
     args = parser.parse_args()
-    # args.name = name
     args, logger = pre_arg(args)
     args.logger = logger
     return args
@@ -144,39 +139,16 @@ def pred_store(args, dataloader, model, pbar):
         for (images, gt_2d_joints, annos) in dataloader:
             anno, idx = annos
             bbox_size = list()
-            if args.model == "mediapipe":
-                image = cv2.flip(cv2.imread(images[0]), 1)
-                mp_hands = mp.solutions.hands
-                with mp_hands.Hands(
-                        static_image_mode=True,
-                        max_num_hands=1,
-                        min_detection_confidence=0.5) as hands:
-                    results = hands.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-                    if not results.multi_hand_landmarks:
-                        continue
-                    pred_joint = np.zeros((1, 21, 2))
-                    for hand_landmarks in results.multi_hand_landmarks:
-                        for idx, joint in enumerate(hand_landmarks.landmark):
-                            pred_joint[0][idx][0] = joint.x * 224
-                            pred_joint[0][idx][1] = joint.y * 224
-
-            else:
-                pred_2d_joints = model(images.cuda())
-                pred_2d_joints = np.array(pred_2d_joints.detach().cpu())
-                
-                # get the joint location from heatmap
-                pred_joint, _ = get_max_preds(pred_2d_joints)
-                # heatmap resolution was 64 x 64 so multiply 4 to make it 256 x 256
-                pred_joint = pred_joint * 4
+            pred_2d_joints = model(images.cuda())
+            pred_2d_joints = np.array(pred_2d_joints.detach().cpu())
+            
+            # get the joint location from heatmap
+            pred_joint, _ = get_max_preds(pred_2d_joints)
+            # heatmap resolution was 64 x 64 so multiply 4 to make it 256 x 256
+            pred_joint = pred_joint * 4
                 
             pred_joint = torch.tensor(pred_joint)
 
-            # for i in idx:
-            #     i = int(i)
-            #     fig = plt.figure()
-            #     visualize_gt(images, gt_2d_joints, fig, i)
-            #     visualize_pred(images, pred_joint, fig, 'evaluation', i, i, args, anno)
-            #     plt.close()
 
             for j in gt_2d_joints:
                 width = max(j[:, 0]) - min(j[:, 0])
@@ -191,7 +163,7 @@ def pred_store(args, dataloader, model, pbar):
                     
             pbar.update(1)
 
-        dump(os.path.join("final_model", args.name, "evaluation.json"), meta)
+        dump(os.path.join("output", args.name, "evaluation.json"), meta)
 
 
 def pred_store_test(args, dataloader, model, pbar):
@@ -241,7 +213,7 @@ def pred_eval(args, T_list, p_bar, method):
 
     pck_list = dict()
 
-    with open(os.path.join("final_model", args.name, "evaluation.json"), 'r') as fi:
+    with open(os.path.join("output", args.name, "evaluation.json"), 'r') as fi:
         meta = json.load(fi)
 
     meta = meta[0]
