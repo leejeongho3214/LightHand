@@ -25,11 +25,7 @@ def build_dataset(args):
     path = "../../dataset/LightHand"
 
     if args.eval:
-        test_dataset = eval_set(args)
-        return test_dataset, test_dataset
-
-    if args.test:
-        test_dataset = test_set(args, path)
+        test_dataset = eval_set(args, "eval")
         return test_dataset, test_dataset
 
     assert args.name.split("/")[0] in ["simplebaseline", "hourglass", "hrnet",
@@ -71,7 +67,8 @@ def build_dataset(args):
 
     elif args.dataset == "ours":
         train_dataset = CustomDataset(args,  path, "train")
-        eval_dataset = val_set(args, path, "eval")
+        # eval_dataset = val_set(args, path, "eval")
+        eval_dataset = eval_set(args, "val")
 
     return train_dataset, eval_dataset
 
@@ -92,7 +89,7 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         name = self.meta[idx]['file_name']
             
-        image = cv2.imread(os.path.join(self.path, name))
+        image = cv2.imread(name)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_size = 256
         
@@ -118,9 +115,64 @@ class CustomDataset(Dataset):
             ])
             
         image = trans(image)
-        heatmap = GenerateHeatmap(64, 21)(joint_2d / 4)
+        # heatmap = GenerateHeatmap(64, 21)(joint_2d / 4)
+        heatmap = self.generate_target(joint_2d)
 
         return image, joint_2d, heatmap
+    
+    
+    
+    def generate_target(self, joints):
+        '''
+        :param joints:  [num_joints, 3]
+        :param joints_vis: [num_joints, 3]
+        :return: target, target_weight(1: visible, 0: invisible)
+        '''
+        target_weight = np.ones((21, 1), dtype=np.float32)
+        target = np.zeros((21,
+                        64,
+                        64),
+                        dtype=np.float32)
+
+        tmp_size = 2 * 3
+
+        for joint_id in range(21):
+            feat_stride = [4, 4]
+            mu_x = int(joints[joint_id][0] / feat_stride[0] + 0.5)
+            mu_y = int(joints[joint_id][1] / feat_stride[1] + 0.5)
+            # Check that any part of the gaussian is in-bounds
+            ul = [int(mu_x - tmp_size), int(mu_y - tmp_size)]
+            br = [int(mu_x + tmp_size + 1), int(mu_y + tmp_size + 1)]
+            if ul[0] >= 64 or ul[1] >= 64 \
+                    or br[0] < 0 or br[1] < 0:
+                # If not, just return the image as is
+                target_weight[joint_id] = 0
+                continue
+
+            # # Generate gaussian
+            size = 2 * tmp_size + 1
+            x = np.arange(0, size, 1, np.float32)
+            y = x[:, np.newaxis]
+            x0 = y0 = size // 2
+            # The gaussian is not normalized, we want the center value to equal 1
+            g = np.exp(- ((x - x0) ** 2 + (y - y0) ** 2) / (2 * 2 ** 2))
+
+            # Usable gaussian range
+            g_x = max(0, -ul[0]), min(br[0], 64) - ul[0]
+            g_y = max(0, -ul[1]), min(br[1], 64) - ul[1]
+            # Image range
+            img_x = max(0, ul[0]), min(br[0], 64)
+            img_y = max(0, ul[1]), min(br[1], 64)
+
+            v = target_weight[joint_id]
+            if v > 0.5:
+                target[joint_id][img_y[0]:img_y[1], img_x[0]:img_x[1]] = \
+                    g[g_y[0]:g_y[1], g_x[0]:g_x[1]]
+
+        # if self.use_different_joints_weight:
+        #     target_weight = np.multiply(target_weight, 1)
+
+        return torch.tensor(target)
 
 
 class val_set(CustomDataset):
@@ -130,27 +182,13 @@ class val_set(CustomDataset):
         self.args.ratio_of_dataset = 1
         with open(os.path.join(f"{self.path}/annotations/{self.phase}", f"CISLAB_{self.phase}_data.json"), "rb") as st_json:
             self.meta = json.load(st_json)
-        self.path = os.path.join(self.path, "images/val")
         
     def __len__(self):
-        return -1
-
-
-class test_set(Dataset):
-    def __init__(self, args, path):
-        self.args = args
-        args.phase = 'test'
-        path = os.path.join("/".join(path.split("/")[:-1]), "new_Armo_val")
-        self.image_path = os.path.join(f'{path}', "images/val")
-        anno_path = os.path.join(
-            f'{path}', "annotations/val/CISLAB_val_rot_data.json")
-        with open(anno_path, "r") as st_json:
-            self.meta = json.load(st_json)
-
+        return len(self.meta)
 
 
 class eval_set(Dataset):
-    def __init__(self, args):
+    def __init__(self, args, phase = "train"):
         self.args = args
         self.image_path = f'../../dataset/Armo_hand_dataset/rgb'
         self.anno_path = f'../../dataset/Armo_hand_dataset/annotations.json'
@@ -164,7 +202,7 @@ class eval_set(Dataset):
                 list_del.append(num)
         for i in list_del:
             del self.json_data[i]
-
+        self.phase = phase
         self.num = list(self.json_data)
 
     def __len__(self):
@@ -190,9 +228,12 @@ class eval_set(Dataset):
         img_size = 256 if not self.args.model == 'mediapipe' else 224
         
         
-        trans = transforms.Compose([transforms.Resize((img_size, img_size)),
-                                    transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        trans = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((img_size, img_size)),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                     0.229, 0.224, 0.225])
+            ])
 
         image = Image.open(f"../../dataset/Armo_hand_dataset/rgb/{self.json_data[f'{idx}']['image_id']}.jpg")
         trans_image = trans(image)
@@ -201,7 +242,12 @@ class eval_set(Dataset):
         joint_2d[:, 0] = joint_2d[:, 0] * img_size
         joint_2d[:, 1] = joint_2d[:, 1] * img_size
 
-        return trans_image, joint_2d_v, [pose_type, idx]
+        if self.phase != "eval":
+            heatmap = GenerateHeatmap(64, 21)(joint_2d / 4)
+            return trans_image, joint_2d, heatmap
+        
+        else:
+            return trans_image, joint_2d_v, [pose_type, idx]
 
 
 class AverageMeter(object):
@@ -254,7 +300,7 @@ def save_checkpoint(model, args, epoch, optimizer, best_loss, count, ment, num_t
         try:
             torch.save({
                 'epoch': epoch,
-                'optimizer_state_dict': optimizer,
+                'optimizer_state_dict': optimizer.state_dict(),
                 'best_loss': best_loss,
                 'count': count,
                 'model_state_dict': model_to_save.state_dict()}, op.join(checkpoint_dir, 'state_dict.bin'))

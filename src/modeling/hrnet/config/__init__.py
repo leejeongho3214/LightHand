@@ -6,4 +6,3 @@
 
 from src.modeling.hrnet.config.default import _C as cfg
 from src.modeling.hrnet.config.default import update_config
-from src.modeling.hrnet.config.models import MODEL_EXTRAS

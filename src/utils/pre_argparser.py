@@ -8,15 +8,15 @@ from src.utils.dir import reset_file
 def pre_arg(args):
     args.output_dir = os.path.join(args.root_path, args.name)
     if args.reset or not os.path.isfile(os.path.join(args.root_path, args.name,'checkpoint-good/state_dict.bin')): reset_file(os.path.join(args.output_dir, "log.txt"))
-    if not args.output_dir.split('/')[1] == "output" and not os.path.isfile((args.output_dir)):  mkdir(args.output_dir); logger = setup_logger(args.name, args.output_dir, get_rank())
+    if (not args.output_dir.split('/')[1] == "output" and not os.path.isfile((args.output_dir))) or args.phase == "test":  mkdir(args.output_dir); logger = setup_logger(args.name, args.output_dir, get_rank())
     else: logger = None
     logger.debug(args)
-    args.num_train_epochs = int(50)
+    args.num_train_epochs = int(60)
     args.multiscale_inference = False
     args.sc = float(1.0)
     args.aml_eval = False
     args.logging_steps = int(100)
-    args.lr = float(1e-4)
+    args.lr = float(1e-3)
     args.vertices_loss_weight = float(1.0)
     args.joints_loss_weight = float(1.0)
     args.vloss_w_full = float(0.5)

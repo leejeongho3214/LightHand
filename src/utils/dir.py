@@ -36,12 +36,12 @@ def add_pypath(path):
         sys.path.insert(0, path)
         
 def resume_checkpoint(_model, path):
-    
     state_dict = torch.load(path)
     best_loss = state_dict['best_loss']
     epoch = state_dict['epoch'] + 1
     count = state_dict['count']
     _model.load_state_dict(state_dict['model_state_dict'], strict=False)
+    optimizier = state_dict['optimizer_state_dict']
     del state_dict
     
-    return best_loss, epoch, _model, count
+    return best_loss, epoch, _model, count, optimizier

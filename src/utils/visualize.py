@@ -32,27 +32,14 @@ def visualize_pred(images, pred_2d_joint, fig, method = None, epoch = 0, iterati
         a = '/'.join(args.output_dir.split('/')[:-2])
         if not os.path.isdir(f"eval_image/{a})"): mkdir(f"eval_image/{a}")
         plt.savefig(os.path.join(f"eval_image/{a}", f'{iteration}.jpg'))
-        # dataset_name = dataset_name[num]
-        # if iteration == 0 and epoch == 0:
-        #     reset_folder(f'eval_image/{args.name[13:-31]}/{dataset_name}')
-        # plt.savefig(f"eval_image/{args.name[13:-31]}/{dataset_name}/{iteration}.jpg")
-
-    elif method == 'train':
-        root = f"{args.output_dir}/train_image"
-        epoch_path = os.path.join(root, f"{epoch}_epoch")
-        if iteration == 0 and epoch == 0:
-            reset_folder(root)
-            reset_folder("/".join(root.split('/')[:-1]) + "/test_image")
-        if not os.path.isdir(epoch_path): mkdir(epoch_path)
-        plt.savefig(os.path.join(epoch_path, f'iter_{iteration}.jpg'))
-
-    elif method == 'test':
-        epoch_path = f'{args.output_dir}/test_image/{epoch}_epoch'
-        if not os.path.isdir(epoch_path): mkdir(epoch_path)
-        plt.savefig(os.path.join(epoch_path, f'iter_{iteration}.jpg'))
 
     else:
-        assert False, "method is the wrong name"
+        epoch_path = f"{args.output_dir}/{method}_image/{epoch}_epoch"
+        if iteration == 0 and epoch == 0:
+            reset_folder(os.path.dirname(epoch_path))
+        if not os.path.isdir(epoch_path): mkdir(epoch_path)
+        plt.savefig(os.path.join(epoch_path, f'iter_{iteration}.jpg'))
+
 
 def visualize_gt(images, gt_2d_joint, fig, iteration):
 

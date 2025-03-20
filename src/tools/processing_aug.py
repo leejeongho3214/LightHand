@@ -35,15 +35,12 @@ class Pkl_transform(Dataset):
         self.img_root = os.path.join(self.root, f"images/{self.phase}/Capture0")    
 
 
-    def processing(self, num, ratio):
-        self.set_path(num)
+    def processing(self):
+        self.set_path()
         joint_list = list()
         pbar = tqdm(total=len(self.meta['images']))
 
         for idx, j in enumerate(self.meta['images']):
-            if idx == int(len(self.meta['images']) * ratio):     ## This means that we can set the dataset size to the desired number
-                break
-            
             pbar.update(1)
             if j['camera'] == '0':
                 continue
@@ -109,50 +106,18 @@ class Pkl_transform(Dataset):
             
             joint_list.append({'file_name': new_img_path, 'joint_2d': calibrationed_joint.tolist()})
             cv2.imwrite(new_img_path, rot_image[:, :, (2, 1, 0)])
-                
-            #     bg_path = "../../datasets/ArmHand/background"
-            #     bg_list = os.listdir(bg_path)
-            #     bg_len = len(bg_list)
-            #     bg_img = cv2.imread(os.path.join(bg_path, bg_list[idx%bg_len]))
-            #     bg_img = cv2.cvtColor(bg_img, cv2.COLOR_BGR2RGB)
-            #     bg_img = cv2.resize(bg_img, (512, 512))
-                
-            #     index = np.where((rot_image[:, :, 0] == 0) & (rot_image[:, :, 1] == 0) & (rot_image[:, :, 2] == 0))
-            #     rot_image[index] = bg_img[index]
-                
-            #     img_root_list = self.img_root.split('/')
-            #     img_root_list[3] = f"new_Armo_{self.ratio}"
-            #     img_root = '/'.join(img_root_list)
-            #     new_img_name = os.path.join(img_root, '/'.join(self.meta['images'][idx]['file_name'].split('/')[1:]))
-            #     new_img_fold_path = os.path.join(img_root, '/'.join(self.meta['images'][idx]['file_name'].split('/')[1:-1]))
-                
-            #     calibrationed_joint = np.array(calibrationed_joint).astype(np.float64)
-            #     bbox = [(min(calibrationed_joint[:, 1]),  min(calibrationed_joint[:, 0])) , (max(calibrationed_joint[:, 1]), max(calibrationed_joint[:, 0]))] ## ((min_row, min_col), (max_row, max_col))
-                
-            #     if not os.path.isdir(new_img_fold_path):
-            #         mkdir(new_img_fold_path)
-                
-            #     cv2.imwrite(new_img_name, rot_image[:, :, (2, 1, 0)])
-            #     dict.append({'file_name': self.meta['images'][idx]['file_name'], 'joint_2d': calibrationed_joint.tolist(
-            #     ), 'joint_3d': joint_3d.tolist(), 'bbox': bbox})
-
-                
-            # else:
-            #     self.dict.append({'file_name': self.meta['images'][idx]['file_name'], 'joint_2d': calibrationed_joint.tolist(
-            #     ), 'joint_3d': joint_3d.tolist(), 'move': int(lift_y + translation_y), 'degree': int(degrees), 'angle': num})
             
-                
         return joint_list
 
         
-    def save_dataset(self, ratio = 1):
-        dict = self.processing(self.phase, ratio, img_store = True)
+    def save_dataset(self):
+        dict = self.processing()
         store_path = f"../../dataset/LightHand/annotations/{self.phase}/CISLAB_{self.phase}_data.json"
         mkdir(os.path.dirname(store_path))
         with open(store_path, 'w') as f:
             json.dump(dict, f)
 
-        print(f"Done ===> {self.store_path}")
+        print(f"Done ===> {store_path}")
         
 def i_rotate(img, degree, move_x, move_y):
     h, w = img.shape[:-1]
@@ -168,9 +133,7 @@ def i_rotate(img, degree, move_x, move_y):
     return result
 
 def main():
-    for ratio in [0.]:
-        Pkl_transform(phase="train").save_dataset(ratio)
-    # Pkl_transform(phase="train").save_dataset()
+    Pkl_transform(phase="eval").save_dataset()
     print("ENDDDDDD")
 
 

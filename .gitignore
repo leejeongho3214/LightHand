@@ -17,6 +17,7 @@ output
 tensorboard
 /datasets
 
+.env
 check_joint_num.py
 frei.py
 our.py
