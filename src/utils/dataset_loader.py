@@ -1,10 +1,11 @@
 import os
+import pickle
 import cv2
 from matplotlib import pyplot as plt
 import scipy.io as sio
 from src.utils.transforms import world2cam, cam2pixel
 from src.utils.preprocessing import load_skeleton, process_bbox
-# from pycocotools.coco import COCO
+from pycocotools.coco import COCO
 from torch.utils.data import Dataset
 import json
 import numpy as np
@@ -101,17 +102,15 @@ class HIU_Dataset(Dataset):
 
 class Dataset_interhand(torch.utils.data.Dataset):
     def __init__(self, mode, args):
-        root_path = "../../datasets"
-        if not os.path.isdir(os.path.join(root_path, 'interhand2.6m/5fps/images')):
-            root_path = "../../../../../../data1/"
+        root_path = "/mnt/SSD01_1tb/jeongho/dataset"
         self.args = args
         self.mode = mode  # train, test, val
-        self.img_path = os.path.join(root_path, 'interhand2.6m/5fps/images')
-        self.annot_path = os.path.join(root_path, 'interhand2.6m/5fps/annotations')
-        if self.mode == 'val':
-            self.rootnet_output_path = os.path.join(root_path, 'interhand2.6m/rootnet_output/rootnet_interhand2.6m_output_val.json')
-        else:
-            self.rootnet_output_path = os.path.join(root_path, 'interhand2.6m/rootnet_output/rootnet_interhand2.6m_output_test.json')
+        self.img_path = os.path.join(root_path, 'InterHand2.6M_5fps_batch1/images')
+        self.annot_path = os.path.join(root_path, 'InterHand2.6M_5fps_batch1/annotations')
+        # if self.mode == 'val':
+        #     self.rootnet_output_path = os.path.join(root_path, 'interhand2.6m/rootnet_output/rootnet_interhand2.6m_output_val.json')
+        # else:
+        #     self.rootnet_output_path = os.path.join(root_path, 'interhand2.6m/rootnet_output/rootnet_interhand2.6m_output_test.json')
         self.joint_num = 21  # single hand
         self.root_joint_idx = {'right': 20, 'left': 41}
         self.joint_type = {'right': np.arange(
@@ -134,15 +133,15 @@ class Dataset_interhand(torch.utils.data.Dataset):
             joints = json.load(f)
 
         # if (self.mode == 'val' or self.mode == 'test') and cfg.trans_test == 'rootnet':
-        if (self.mode == 'val' or self.mode == 'test'):
-            print("Get bbox and root depth from " + self.rootnet_output_path)
-            rootnet_result = {}
-            with open(self.rootnet_output_path) as f:
-                annot = json.load(f)
-            for i in range(len(annot)):
-                rootnet_result[str(annot[i]['annot_id'])] = annot[i]
-        else:
-            print("Get bbox and root depth from groundtruth annotation")
+        # if (self.mode == 'val' or self.mode == 'test'):
+        #     print("Get bbox and root depth from " + self.rootnet_output_path)
+        #     rootnet_result = {}
+        #     with open(self.rootnet_output_path) as f:
+        #         annot = json.load(f)
+        #     for i in range(len(annot)):
+        #         rootnet_result[str(annot[i]['annot_id'])] = annot[i]
+        # else:
+        #     print("Get bbox and root depth from groundtruth annotation")
 
         for aid in db.anns.keys():
             ann = db.anns[aid]
@@ -177,17 +176,17 @@ class Dataset_interhand(torch.utils.data.Dataset):
                 (ann['hand_type_valid']), dtype=np.float32)
 
             # if (self.mode == 'val' or self.mode == 'test') and cfg.trans_test == 'rootnet':
-            if (self.mode == 'val' or self.mode == 'test'):
-                bbox = np.array(
-                    rootnet_result[str(aid)]['bbox'], dtype=np.float32)
-                abs_depth = {'right': rootnet_result[str(
-                    aid)]['abs_depth'][0], 'left': rootnet_result[str(aid)]['abs_depth'][1]}
-            else:
-                img_width, img_height = img['width'], img['height']
-                bbox = np.array(ann['bbox'], dtype=np.float32)  # x,y,w,h
-                bbox = process_bbox(bbox, (img_height, img_width))
-                abs_depth = {'right': joint_cam[self.root_joint_idx['right'],
-                                                2], 'left': joint_cam[self.root_joint_idx['left'], 2]}
+            # if (self.mode == 'val' or self.mode == 'test'):
+            #     bbox = np.array(
+            #         rootnet_result[str(aid)]['bbox'], dtype=np.float32)
+            #     abs_depth = {'right': rootnet_result[str(
+            #         aid)]['abs_depth'][0], 'left': rootnet_result[str(aid)]['abs_depth'][1]}
+            # else:
+            img_width, img_height = img['width'], img['height']
+            bbox = np.array(ann['bbox'], dtype=np.float32)  # x,y,w,h
+            bbox = process_bbox(bbox, (img_height, img_width))
+            abs_depth = {'right': joint_cam[self.root_joint_idx['right'],
+                                            2], 'left': joint_cam[self.root_joint_idx['left'], 2]}
 
             cam_param = {'focal': focal, 'princpt': princpt}
             joint = {'cam_coord': joint_cam,
@@ -236,14 +235,15 @@ class Dataset_interhand(torch.utils.data.Dataset):
         # 3rd dimension means depth-relative value
         joint = np.concatenate((joint_img, joint_cam[:, 2, None]), 1)
 
-        if self.args.model == "ours":
-            size = 224
-        else:
-            size = 256
-        
+        image_size = 256
 
-        trans = transforms.Compose([transforms.Resize((size, size)),
-                                    transforms.ToTensor()])
+        
+        trans = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((image_size, image_size)),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                     0.229, 0.224, 0.225])
+            ]) 
 
         ori_img = Image.open(img_path)
         
@@ -272,28 +272,85 @@ class Dataset_interhand(torch.utils.data.Dataset):
             20, 3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8, 15, 14, 13, 12, 19, 18, 17, 16), :]
         # joint[:, 0] = joint[:, 0] - bbox[0]; joint[:, 1] = joint[:, 1] - bbox[1]
         
-        joint[:, 0] = joint[:, 0] * (size / ori_img.width)
-        joint[:, 1] = joint[:, 1] * (size / ori_img.height)
+        joint[:, 0] = joint[:, 0] * (image_size / ori_img.width)
+        joint[:, 1] = joint[:, 1] * (image_size / ori_img.height)
         targets = torch.tensor(joint[:21, :-1])
-        heatmap = GenerateHeatmap(64, 21)(targets/4)
+        heatmap = self.generate_target(targets)
 
         return img, targets, heatmap
+    
+    def generate_target(self, joints):
+        '''
+        :param joints:  [num_joints, 3]
+        :param joints_vis: [num_joints, 3]
+        :return: target, target_weight(1: visible, 0: invisible)
+        '''
+        target_weight = np.ones((21, 1), dtype=np.float32)
+        target = np.zeros((21,
+                        64,
+                        64),
+                        dtype=np.float32)
+
+        tmp_size = 2 * 3
+
+        for joint_id in range(21):
+            feat_stride = [4, 4]
+            mu_x = int(joints[joint_id][0] / feat_stride[0] + 0.5)
+            mu_y = int(joints[joint_id][1] / feat_stride[1] + 0.5)
+            # Check that any part of the gaussian is in-bounds
+            ul = [int(mu_x - tmp_size), int(mu_y - tmp_size)]
+            br = [int(mu_x + tmp_size + 1), int(mu_y + tmp_size + 1)]
+            if ul[0] >= 64 or ul[1] >= 64 \
+                    or br[0] < 0 or br[1] < 0:
+                # If not, just return the image as is
+                target_weight[joint_id] = 0
+                continue
+
+            # # Generate gaussian
+            size = 2 * tmp_size + 1
+            x = np.arange(0, size, 1, np.float32)
+            y = x[:, np.newaxis]
+            x0 = y0 = size // 2
+            # The gaussian is not normalized, we want the center value to equal 1
+            g = np.exp(- ((x - x0) ** 2 + (y - y0) ** 2) / (2 * 2 ** 2))
+
+            # Usable gaussian range
+            g_x = max(0, -ul[0]), min(br[0], 64) - ul[0]
+            g_y = max(0, -ul[1]), min(br[1], 64) - ul[1]
+            # Image range
+            img_x = max(0, ul[0]), min(br[0], 64)
+            img_y = max(0, ul[1]), min(br[1], 64)
+
+            v = target_weight[joint_id]
+            if v > 0.5:
+                target[joint_id][img_y[0]:img_y[1], img_x[0]:img_x[1]] = \
+                    g[g_y[0]:g_y[1], g_x[0]:g_x[1]]
+
+        # if self.use_different_joints_weight:
+        #     target_weight = np.multiply(target_weight, 1)
+
+        return torch.tensor(target)
     
 class RHD(Dataset):
     def __init__(self, args, phase):
         self.args = args
-        self.img_path = "../../datasets/rhd"
-        with open("../../datasets/rhd/annotations/rhd_%s.json" % phase, "r") as st_json:
-            self.anno = json.load(st_json)
+        self.path = "../../dataset/RHD_published_v2"
+        self.phase = phase
+        
+        with open(f"../../dataset/RHD_published_v2/{phase}/anno_{phase}.pickle", "rb") as st_json:
+            self.anno = pickle.load(st_json)
+
 
     def __len__(self):
-        return len(self.anno['annotations'])
+        return len(self.anno)
 
     def __getitem__(self, idx):
         ori_img = Image.open(os.path.join(
-            self.img_path, self.anno['images'][idx]['file_name']))
-        joint = np.array(self.anno['annotations'][idx]['keypoints'])
-        bbox = list(map(int, self.anno['annotations'][idx]['bbox']))
+            self.path, self.phase, "color", f"{idx:05d}.png"))
+        joint_z = np.matmul(self.anno[idx]["K"], self.anno[idx]["xyz"].T).T
+        joint = joint_z / joint_z[:, -1].reshape(-1, 1)
+        
+        # bbox = list(map(int, self.anno['annotations'][idx]['bbox']))
         img = np.array(ori_img)
 
         if not self.args.model == "ours":
@@ -301,17 +358,17 @@ class RHD(Dataset):
         else:
             size = 224
             
-        if bbox[2] % 2 == 1: bbox[2] - 1
-        if bbox[3] % 2 == 1: bbox[3] - 1
-        space_l = int(224 - bbox[3]) / 2; space_r = int(224 - bbox[2]) / 2
-        if (bbox[1] - space_l) < 0: space_l = bbox[1]
-        if (bbox[1] + bbox[3] + space_l) > ori_img.height: space_l = ori_img.height - (bbox[1] + bbox[3]) - 1
-        if (bbox[0] - space_r) < 0: space_r = bbox[0]
-        if (bbox[0] +  bbox[2] + space_r) > ori_img.width: space_r = ori_img.width - (bbox[0] + bbox[2]) - 1
+        # if bbox[2] % 2 == 1: bbox[2] - 1
+        # if bbox[3] % 2 == 1: bbox[3] - 1
+        # space_l = int(224 - bbox[3]) / 2; space_r = int(224 - bbox[2]) / 2
+        # if (bbox[1] - space_l) < 0: space_l = bbox[1]
+        # if (bbox[1] + bbox[3] + space_l) > ori_img.height: space_l = ori_img.height - (bbox[1] + bbox[3]) - 1
+        # if (bbox[0] - space_r) < 0: space_r = bbox[0]
+        # if (bbox[0] +  bbox[2] + space_r) > ori_img.width: space_r = ori_img.width - (bbox[0] + bbox[2]) - 1
         
-        img = img[int(bbox[1] - space_l): int(bbox[1] + bbox[3] + space_l), int(bbox[0] -  space_r) : int(bbox[0] + bbox[2] +  space_r)]
-        joint[:, 0] = (joint[:, 0] - bbox[0] + space_r) * (self.anno['images'][idx]['width']/(bbox[2] + 2*space_r))
-        joint[:, 1] = (joint[:, 1] - bbox[1] + space_l) * (self.anno['images'][idx]['width']/(bbox[3] + 2*space_l))
+        # img = img[int(bbox[1] - space_l): int(bbox[1] + bbox[3] + space_l), int(bbox[0] -  space_r) : int(bbox[0] + bbox[2] +  space_r)]
+        # joint[:, 0] = (joint[:, 0] - bbox[0] + space_r) * (self.anno['images'][idx]['width']/(bbox[2] + 2*space_r))
+        # joint[:, 1] = (joint[:, 1] - bbox[1] + space_l) * (self.anno['images'][idx]['width']/(bbox[3] + 2*space_l))
         
         joint_order = [0, 4, 3, 2, 1, 8, 7, 6, 5, 12,
                        11, 10, 9, 16, 15, 14, 13, 20, 19, 18, 17]
@@ -320,15 +377,68 @@ class RHD(Dataset):
                                     transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         joint = joint[joint_order, :]
-        joint[:, 0] = joint[:, 0] * (size / self.anno['images'][idx]['width'])
-        joint[:, 1] = joint[:, 1] * (size / self.anno['images'][idx]['height'])
+        joint[:, 0] = joint[:, 0] * (size / 320)
+        joint[:, 1] = joint[:, 1] * (size / 320)
         joint = torch.tensor(joint)
 
-        heatmap = GenerateHeatmap(64, 21)(joint/4)
+        # heatmap = GenerateHeatmap(64, 21)(joint/4)
+        heatmap = self.generate_target(joint)
         img = Image.fromarray(img)
         img = trans(img)
 
         return img, joint[:, :2].float(), heatmap
+    
+    def generate_target(self, joints):
+        '''
+        :param joints:  [num_joints, 3]
+        :param joints_vis: [num_joints, 3]
+        :return: target, target_weight(1: visible, 0: invisible)
+        '''
+        target_weight = np.ones((21, 1), dtype=np.float32)
+        target = np.zeros((21,
+                        64,
+                        64),
+                        dtype=np.float32)
+
+        tmp_size = 2 * 3
+
+        for joint_id in range(21):
+            feat_stride = [4, 4]
+            mu_x = int(joints[joint_id][0] / feat_stride[0] + 0.5)
+            mu_y = int(joints[joint_id][1] / feat_stride[1] + 0.5)
+            # Check that any part of the gaussian is in-bounds
+            ul = [int(mu_x - tmp_size), int(mu_y - tmp_size)]
+            br = [int(mu_x + tmp_size + 1), int(mu_y + tmp_size + 1)]
+            if ul[0] >= 64 or ul[1] >= 64 \
+                    or br[0] < 0 or br[1] < 0:
+                # If not, just return the image as is
+                target_weight[joint_id] = 0
+                continue
+
+            # # Generate gaussian
+            size = 2 * tmp_size + 1
+            x = np.arange(0, size, 1, np.float32)
+            y = x[:, np.newaxis]
+            x0 = y0 = size // 2
+            # The gaussian is not normalized, we want the center value to equal 1
+            g = np.exp(- ((x - x0) ** 2 + (y - y0) ** 2) / (2 * 2 ** 2))
+
+            # Usable gaussian range
+            g_x = max(0, -ul[0]), min(br[0], 64) - ul[0]
+            g_y = max(0, -ul[1]), min(br[1], 64) - ul[1]
+            # Image range
+            img_x = max(0, ul[0]), min(br[0], 64)
+            img_y = max(0, ul[1]), min(br[1], 64)
+
+            v = target_weight[joint_id]
+            if v > 0.5:
+                target[joint_id][img_y[0]:img_y[1], img_x[0]:img_x[1]] = \
+                    g[g_y[0]:g_y[1], g_x[0]:g_x[1]]
+
+        # if self.use_different_joints_weight:
+        #     target_weight = np.multiply(target_weight, 1)
+
+        return torch.tensor(target)
     
 class STB(Dataset):
     def __init__(self, args):
@@ -373,7 +483,7 @@ class STB(Dataset):
 class GAN(Dataset):
     def __init__(self, args,):
         self.args = args
-        self.img_path = "../../../../../../data1/GAN/GANeratedHands_Release/data/noObject"
+        self.img_path = "../../dataset/GANeratedHands_Release/data/noObject"
         img_folder= os.listdir(self.img_path)
         self.meta = list()
         

@@ -279,8 +279,7 @@ class HandMeshTSVDataset(object):
         img = self.rgb_processing(img, center, sc*scale, rot, flip, pn)
         img = torch.from_numpy(img).float()
         
-        if self.args.model == "ours": size =  224
-        else:  size= 256
+        size= 256
         img = transforms.Resize((size, size))(img)
         
         # Store image before normalization to use it in visualization
@@ -337,10 +336,62 @@ class HandMeshTSVDataset(object):
         # transfromed_img = transforms.Resize((224, 224))(transfromed_img)
 
         joint_2d = (meta_data['joints_2d'][:,:-1] * 100 + 112) * (size / 224)
-        heatmap= GenerateHeatmap(64, 21)(joint_2d/4)
+        heatmap= self.generate_target(joint_2d)
         
         return transfromed_img[(2,1,0),:,:], joint_2d, heatmap
-    
+
+    def generate_target(self, joints):
+        '''
+        :param joints:  [num_joints, 3]
+        :param joints_vis: [num_joints, 3]
+        :return: target, target_weight(1: visible, 0: invisible)
+        '''
+        target_weight = np.ones((21, 1), dtype=np.float32)
+        target = np.zeros((21,
+                        64,
+                        64),
+                        dtype=np.float32)
+
+        tmp_size = 2 * 3
+
+        for joint_id in range(21):
+            feat_stride = [4, 4]
+            mu_x = int(joints[joint_id][0] / feat_stride[0] + 0.5)
+            mu_y = int(joints[joint_id][1] / feat_stride[1] + 0.5)
+            # Check that any part of the gaussian is in-bounds
+            ul = [int(mu_x - tmp_size), int(mu_y - tmp_size)]
+            br = [int(mu_x + tmp_size + 1), int(mu_y + tmp_size + 1)]
+            if ul[0] >= 64 or ul[1] >= 64 \
+                    or br[0] < 0 or br[1] < 0:
+                # If not, just return the image as is
+                target_weight[joint_id] = 0
+                continue
+
+            # # Generate gaussian
+            size = 2 * tmp_size + 1
+            x = np.arange(0, size, 1, np.float32)
+            y = x[:, np.newaxis]
+            x0 = y0 = size // 2
+            # The gaussian is not normalized, we want the center value to equal 1
+            g = np.exp(- ((x - x0) ** 2 + (y - y0) ** 2) / (2 * 2 ** 2))
+
+            # Usable gaussian range
+            g_x = max(0, -ul[0]), min(br[0], 64) - ul[0]
+            g_y = max(0, -ul[1]), min(br[1], 64) - ul[1]
+            # Image range
+            img_x = max(0, ul[0]), min(br[0], 64)
+            img_y = max(0, ul[1]), min(br[1], 64)
+
+            v = target_weight[joint_id]
+            if v > 0.5:
+                target[joint_id][img_y[0]:img_y[1], img_x[0]:img_x[1]] = \
+                    g[g_y[0]:g_y[1], g_x[0]:g_x[1]]
+
+        # if self.use_different_joints_weight:
+        #     target_weight = np.multiply(target_weight, 1)
+
+        return torch.tensor(target)
+
 def blur_heatmaps(heatmaps):
     """Blurs heatmaps using GaussinaBlur of defined size"""
     heatmaps_blurred = heatmaps.copy()

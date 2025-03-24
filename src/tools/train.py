@@ -36,7 +36,7 @@ def main(args):
     )
 
 
-    _model, best_pck, epo, count, writer, _, optimizer_state = load_model(args)
+    _model, best_loss, epo, count, writer, _, optimizer_state = load_model(args)
     batch_time = AverageMeter()
     d_type = "3D" if args.D3 else "2D"
     
@@ -48,7 +48,8 @@ def main(args):
     if optimizer_state: optimizer.load_state_dict(optimizer_state)
 
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, [20, 40, 50], 0.1,
+        optimizer, _, args, 
+        gamma =0.1, 
         last_epoch = -1
         )
 
@@ -64,8 +65,6 @@ def main(args):
                 )
             )
             
-        lr_scheduler.step()
-            
         trained_model, optimizer, batch_time, runner = train(
             args,
             trainset_loader,
@@ -79,15 +78,16 @@ def main(args):
             batch_time,
             optimizer
         )
-        _, count, pck, batch_time = valid(
+        
+        val_loss, count, _, batch_time = valid(
             valset_loader,
             trained_model,
-            best_pck,
+            best_loss,
             runner
         )
-
-        is_best = best_pck < pck
-        best_pck = max(pck, best_pck)
+        
+        is_best = best_loss > val_loss
+        best_loss = min(val_loss, best_loss)
 
         if is_best:
             count = 0
@@ -97,7 +97,7 @@ def main(args):
                 args,
                 epoch,
                 optimizer,
-                best_pck,
+                best_loss,
                 count,
                 "good",
                 logger=args.logger,
@@ -108,6 +108,9 @@ def main(args):
             count += 1
             if count == args.count:
                 break
+            
+        lr_scheduler.step(count_num = count)
+
             
         gc.collect()
         torch.cuda.empty_cache()

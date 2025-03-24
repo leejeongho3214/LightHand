@@ -44,7 +44,6 @@ class Runner_t(object):
         self.epoch = epoch
         self.criterion_keypoints = torch.nn.MSELoss(reduction="none").cuda(args.device)
         self.log_losses = AverageMeter()
-        self.log_2d_losses = AverageMeter()
         self.pck_losses = AverageMeter()
         self.epe_losses = AverageMeter()
         self.criterion = JointsMSELoss(use_target_weight=False).cuda()
@@ -59,7 +58,7 @@ class Runner_t(object):
                         "epoch: {ep}",
                         "iter: {iter}",
                         "/{maxi}, count: {count}/{max_count}",
-                        "lr: {lr}"
+                        "lr: {lr:.6f}"
                     ]
                 ).format(
                     len=self.len_data,
@@ -70,8 +69,7 @@ class Runner_t(object):
                     max_count=self.args.count,
                     lr = self.optimizer.param_groups[0]['lr']
                 )
-                + " 2d_loss: {:.8f}, total_loss: {:.8f}".format(
-                    self.log_2d_losses.avg,
+                + " loss: {:.8f}".format(
                     self.log_losses.avg,
                 )
             )
@@ -96,7 +94,7 @@ class Runner_t(object):
                 "name: {name} | "
                 "count: {count} | "
                 "loss: {total:.6f} |"
-                "lr: {lr}"
+                "lr: {lr:.6f}"
             ).format(
                 name=self.args.name.split("/")[-1],
                 count=self.count,
@@ -115,26 +113,26 @@ class Runner_t(object):
             self.bar.suffix = (
                 "({iteration}/{data_loader}) "
                 "count: {count} | "
-                "loss: {total:.6f} | "
-                "best_pck: {best_pck:.6f}\n"
+                "loss: {loss:.6f} | "
+                "best_loss: {best_loss:.6f}\n"
             ).format(
                 name=self.args.name.split("/")[-1],
                 count=self.count,
                 iteration=iteration,
-                best_pck=self.best_pck,
+                best_loss=self.best_loss,
                 data_loader=len(self.now_loader),
-                total=self.pck_losses.avg,
+                loss=self.log_losses.avg,
             )
             self.logger.debug(
                 " ".join(["Test =>> epoch: {ep}", "iter: {iter}", "/{maxi}"]).format(
                     ep=self.epoch, iter=iteration, maxi=len(self.now_loader)
                 )
-                + " epe: {:.2f}mm, count: {} / {}, total_pck: {:.2f} %, best_pck: {:.2f} %, expected_date: {}".format(
+                + " epe: {:.2f}mm, count: {} / {}, total_pck: {:.2f} %, best_loss: {:.7f} , expected_date: {}".format(
                     self.epe_losses.avg * 0.26,
                     int(self.count),
                     self.args.count,
                     self.pck_losses.avg * 100,
-                    self.best_pck,
+                    self.best_loss,
                     tt,
                 )
             )
@@ -143,15 +141,15 @@ class Runner_t(object):
             self.bar.suffix = (
                 "({iteration}/{data_loader}) "
                 "count: {count} | "
-                "loss: {total:.6f} | "
-                "best_pck: {best_pck:.6f}"
+                "loss: {loss:.6f} | "
+                "best_loss: {best_loss:.6f}"
             ).format(
                 name=self.args.name.split("/")[-1],
                 count=self.count,
                 iteration=iteration,
-                best_pck=self.best_pck,
+                best_loss=self.best_loss,
                 data_loader=len(self.now_loader),
-                total=self.pck_losses.avg,
+                loss=self.log_losses.avg,
             )
         self.bar.next()
 
@@ -163,7 +161,7 @@ class Runner_t(object):
                 self.train_loader
             ):
                 batch_size = images.size(0)
-                adjust_learning_rate(self.optimizer, self.epoch, self.args)
+                # adjust_learning_rate(self.optimizer, self.epoch, self.args)
                 images = images.cuda()
                 gt_heatmaps = gt_heatmaps.cuda()
                 pred = self.model(images)
@@ -213,6 +211,7 @@ class Runner_t(object):
                 self.train_log(iteration, eta_seconds, end)
                 
             self.writer.add_scalar("Loss/train", self.log_losses.avg, self.epoch)
+            
             return self.model, self.optimizer, self.batch_time
 
         else:
@@ -238,7 +237,6 @@ class Runner_t(object):
                     )  ## heatmap resolution was 64 x 64 so multiply 4 to make it 256 x 256
                     pred_joint = torch.tensor(pred_joint).cuda()
 
-                    
                     self.log_losses.update(loss.item(), batch_size)
 
                     pck = PCK_2d_loss(
@@ -277,7 +275,7 @@ class Runner_t(object):
                     )
 
                     self.test_log(iteration, eta_seconds, end)
-
+                    
                 self.writer.add_scalar("Loss/valid", self.log_losses.avg, self.epoch)
                 
                 return (
@@ -295,17 +293,16 @@ class Runner_v(Runner_t):
         model,
         test_dataloader,
         phase,
-        best_pck,
+        best_loss,
     ):
         self.__dict__ = train_runner.__dict__.copy()
         self.now_loader = test_dataloader
-        self.best_pck = best_pck
+        self.best_loss = best_loss
         self.model = model
         self.phase = phase
         self.bar = Bar(
             colored(str(self.epoch) + "_" + phase, color="blue"), max=len(self.now_loader)
         )
         self.log_losses.reset()
-        self.log_2d_losses.reset()
         self.pck_losses.reset()
         self.epe_losses.reset()

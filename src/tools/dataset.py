@@ -22,7 +22,9 @@ sys.path.insert(0, os.path.abspath(
 
 
 def build_dataset(args):
-    path = "../../dataset/LightHand"
+    
+    folder_name = {"ours": "LightHand", "frei": "freihand", "interhand": "InterHand", "rhd": "RHD_published_v2", "gan": "GANeratedHands_Release"}
+    path = f"../../dataset/LightHand"
 
     if args.eval:
         test_dataset = eval_set(args, "eval")
@@ -43,18 +45,21 @@ def build_dataset(args):
     elif args.dataset == "frei":  # Frei don't provide 2d anno in valid-set
         dataset = make_hand_data_loader(
             args, args.train_yaml,  is_train=True)
-        train_dataset1 = CustomDataset(args,  path, "train")
-        eval_dataset1 = val_set(args, path, "val")
-        # This function's name is random_split but i change it to split the dataset by sqeuntial order
-        train_dataset2, eval_dataset2 = random_split(
+        # train_dataset1 = CustomDataset(args,  path, "train")
+        # eval_dataset1 = val_set(args, path, "val")
+        # # This function's name is random_split but i change it to split the dataset by sqeuntial order
+        # train_dataset2, eval_dataset2 = random_split(
+        #     dataset, [int(len(dataset) * 0.9), len(dataset) - (int(len(dataset) * 0.9))])
+
+        # train_dataset = ConcatDataset([train_dataset1, train_dataset2])
+        # eval_dataset = ConcatDataset([eval_dataset1, eval_dataset2])
+        
+        train_dataset, eval_dataset = random_split(
             dataset, [int(len(dataset) * 0.9), len(dataset) - (int(len(dataset) * 0.9))])
 
-        train_dataset = ConcatDataset([train_dataset1, train_dataset2])
-        eval_dataset = ConcatDataset([eval_dataset1, eval_dataset2])
-
     elif args.dataset == "rhd":
-        train_dataset = RHD(args, "train")
-        eval_dataset = RHD(args, "test")
+        train_dataset = RHD(args, "training")
+        eval_dataset = RHD(args, "evaluation")
 
     elif args.dataset == "stb":
         train_dataset = STB(args)
@@ -67,8 +72,8 @@ def build_dataset(args):
 
     elif args.dataset == "ours":
         train_dataset = CustomDataset(args,  path, "train")
-        # eval_dataset = val_set(args, path, "eval")
-        eval_dataset = eval_set(args, "val")
+        eval_dataset = val_set(args, path, "eval")
+        # eval_dataset = eval_set(args, "val")
 
     return train_dataset, eval_dataset
 
@@ -82,6 +87,11 @@ class CustomDataset(Dataset):
         
         with open(f"{path}/annotations/{phase}/CISLAB_{phase}_data.json", "rb") as st_json:
             self.meta = json.load(st_json)
+            
+        if self.args.num_our > 150000 and phase == "train":
+            with open(f"{path}/annotations/{phase}2/CISLAB_{phase}2_data.json", "rb") as st_json:
+                meta_2nd = json.load(st_json)
+                self.meta = self.meta + meta_2nd
 
     def __len__(self):
         return self.args.num_our
@@ -94,7 +104,7 @@ class CustomDataset(Dataset):
         image_size = 256
         
         joint_2d = torch.tensor(
-            self.meta[idx]['joint_2d']) * (256/512)
+            self.meta[idx]['joint_2d']) * (256/224)
 
         if idx < len(self.meta) * self.ratio_of_aug:
             trans = transforms.Compose([

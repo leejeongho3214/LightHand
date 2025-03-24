@@ -20,7 +20,8 @@ import pickle
 
 
 class Pkl_transform(Dataset):
-    def __init__(self, phase):
+    def __init__(self, phase, input_size):
+        self.input_size = input_size / 2
         self.phase = phase
         self.root = "../../dataset/ArmHand"
         self.dict = list()
@@ -60,20 +61,23 @@ class Pkl_transform(Dataset):
             calibrationed_joint[:, :2] = calibrationed_joint[:,
                                                              :2]/(calibrationed_joint[:, 2][:, None].repeat(1, 2))
             calibrationed_joint = calibrationed_joint[:,
-                                                      :2] * focal_length + 256
+                                                      :2] * focal_length + self.input_size
 
-            if any(joint[idx] < 50 or joint[idx] > 460 for joint in calibrationed_joint for idx in range(2)):
+            # if any(joint[idx] < 50 or joint[idx] > 460 for joint in calibrationed_joint for idx in range(2)):
+            #     continue
+            
+            if any(joint[idx] < 20 or joint[idx] > 200 for joint in calibrationed_joint for idx in range(2)):
                 continue
 
             degrees = random.uniform(-20, 20)
             rad = math.radians(degrees)
             # If wrist was rotated, it happend black area under rotated wrist
             lowest_wrist_left, lowest_wrist_right = [
-                79-256, -256], [174-256, -256]
+                79-self.input_size, -self.input_size], [174-self.input_size, -self.input_size]
             rot_lowest_wrist_left = math.cos(
-                rad) * lowest_wrist_left[1] - math.sin(rad) * lowest_wrist_left[0] + 256
+                rad) * lowest_wrist_left[1] - math.sin(rad) * lowest_wrist_left[0] + self.input_size
             rot_lowest_wrist_right = math.cos(
-                rad) * lowest_wrist_right[1] - math.sin(rad) * lowest_wrist_right[0] + 256
+                rad) * lowest_wrist_right[1] - math.sin(rad) * lowest_wrist_right[0] + self.input_size
 
             if rot_lowest_wrist_left > 0:
                 lift_y = rot_lowest_wrist_left
@@ -84,17 +88,16 @@ class Pkl_transform(Dataset):
             else:
                 lift_y = 0
 
-            translation_y = random.uniform(0, 40)
+            # translation_y = random.uniform(0, 40)
+            translation_y = random.uniform(0, 17)
 
             calibrationed_joint[:, 0] = math.cos(
-                rad) * (calibrationed_joint[:, 0] - 256) + math.sin(rad) * (calibrationed_joint[:, 1] - 256) + 256
-            calibrationed_joint[:, 1] = math.cos(rad) * (calibrationed_joint[:, 1] - 256) - math.sin(
-                rad) * (calibrationed_joint[:, 0] - 256) + 256 + lift_y + translation_y
+                rad) * (calibrationed_joint[:, 0] - self.input_size) + math.sin(rad) * (calibrationed_joint[:, 1] - self.input_size) + self.input_size
+            calibrationed_joint[:, 1] = math.cos(rad) * (calibrationed_joint[:, 1] - self.input_size) - math.sin(
+                rad) * (calibrationed_joint[:, 0] - self.input_size) + self.input_size + lift_y + translation_y
 
-            if any(joint[idx] < 50 or joint[idx] > 460 for joint in calibrationed_joint for idx in range(2)):
+            if any(joint[idx] < 20 or joint[idx] > 200 for joint in calibrationed_joint for idx in range(2)):
                 continue
-            
-            # if img_store:
             
             image_path = os.path.join(self.img_root, '/'.join(self.meta['images'][idx]['file_name'].split('/')[1:]))
             image = cv2.imread(image_path)
@@ -133,7 +136,7 @@ def i_rotate(img, degree, move_x, move_y):
     return result
 
 def main():
-    Pkl_transform(phase="eval").save_dataset()
+    Pkl_transform(phase="train2", input_size=224).save_dataset()
     print("ENDDDDDD")
 
 

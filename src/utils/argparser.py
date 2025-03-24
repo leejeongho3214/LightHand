@@ -26,9 +26,10 @@ from src.utils.visualize import *
 
 def parse_args(phase="train"):
     parser = argparse.ArgumentParser()
+    # {"ours": "LightHand", "frei": "freihand", "interhand": "InterHand", "rhd": "RHD_published_v2", "gan": "GANeratedHands_Release"}
     parser.add_argument(
         "--root",
-        default="hrnet/ours",
+        default=f"simplebaseline/ours",
         help="You write down to store the directory path",
         type=str,
     )
@@ -45,14 +46,18 @@ def parse_args(phase="train"):
         required=False,
         help="The root directory to save location which you want",
     )
+    
+    args, _ = parser.parse_known_args()
+    
     parser.add_argument("--model", default="ours", type=str, required=False)
-    parser.add_argument("--dataset", default="ours", type=str, required=False)
+    parser.add_argument("--dataset", default=args.root.split("/")[-1], type=str, required=False)
     parser.add_argument("--view", default="wrist", type=str, required=False)
     parser.add_argument("--batch_size", default=32, type=int)
+    parser.add_argument("--milestone", default=10, type=int)
     parser.add_argument("--count", default=30, type=int)
     parser.add_argument(
         "--num_our",
-        default=84000,
+        default=300000,
         type=int,
         help="Our dataset have 420k imaegs so you can use train data as many as you want, according to this ratio",
     )
@@ -63,10 +68,11 @@ def parse_args(phase="train"):
         type=float,
         help="You can use color jitter to train data as many as you want, according to this ratio",
     )
-    parser.add_argument("--epoch", default=50, type=int)
+    parser.add_argument("--epoch", default=100, type=int)
 
     parser.add_argument("--scale", action="store_true")
     parser.add_argument("--plt", action="store_true")
+    parser.add_argument("--transfer", action="store_true")
     parser.add_argument("--eval", action="store_true")
     parser.add_argument("--test", action="store_true")
     parser.add_argument("--logger", action="store_true")
@@ -94,7 +100,7 @@ def parse_args(phase="train"):
 
 def load_model(args):
     epoch = 0
-    best_pck = 0
+    best_loss = np.inf
     count = 0
     optimizer_state = 0
     args.device = torch.device(args.device)
@@ -135,7 +141,8 @@ def load_model(args):
                 args.root_path, args.name, "checkpoint-good/state_dict.bin"
             )
         ):
-            best_pck, epoch, _model, count, optimizer_state = resume_checkpoint(
+
+            best_loss, epoch, _model, count, optimizer_state = resume_checkpoint(
                 _model,
                 os.path.join(
                     args.root_path, args.name, "checkpoint-good/state_dict.bin"
@@ -154,10 +161,27 @@ def load_model(args):
         else:
             reset_folder(log_dir)
             msg = "init"
-
+            
+    if args.transfer:
+        _, _, _model, _, _ = resume_checkpoint(
+            _model,
+            os.path.join(
+                "output/simplebaseline/frei/ori", "checkpoint-good/state_dict.bin"
+            ),
+        )
+        args.logger.debug(
+            "Transfer_Loading ===> %s" % os.path.join(args.root_path, args.name)
+        )
+        print(
+            colored(
+                "Transfer_Loading ===> %s" % os.path.join(args.root_path, args.name),
+                "green",
+            )
+        )
+            
     _model.to(args.device)
 
-    return _model, best_pck, epoch, count, writer, msg, optimizer_state
+    return _model, best_loss, epoch, count, writer, msg, optimizer_state
 
 
 def train(
@@ -196,7 +220,7 @@ def train(
 def valid(
     test_dataloader,
     trained_model,
-    best_pck,
+    best_loss,
     train_runner
 ):
     end = time.time()
@@ -205,7 +229,7 @@ def valid(
         trained_model,
         test_dataloader,
         "VALID",
-        best_pck,
+        best_loss,
     )
     loss, count, pck, batch_time = runner.run(end)
 

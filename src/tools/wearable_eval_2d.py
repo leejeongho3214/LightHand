@@ -30,11 +30,11 @@ def main():
         shuffle=False,
     )
     print(len(eval_dataset))
-    model_path = "output/hrnet/ours"
+    model_path = "output/simplebaseline/ours"
     model_list = list()
     for root, _, files in os.walk(model_path):
         for file in files:
-            if ".bin" in file:
+            if ".bin" in file and root.split("/")[-2].startswith("transfer"):
                 model_list.append(os.path.join(root, file))
 
     aa = [
@@ -52,7 +52,7 @@ def main():
             args.model = path_name.split("/")[1]
             args.name = ("/").join(path_name.split("/")[1:-2])
             args.output_dir = path_name
-            _model, _, _, _, _, msg, _ = load_model(args)
+            _model, _, _, _, _, _, _ = load_model(args)
             state_dict = torch.load(path_name)
             _model.load_state_dict(state_dict["model_state_dict"], strict=False)
 
@@ -63,7 +63,7 @@ def main():
         pbar.close()
 
         file_name = os.path.join(
-            f"pck_eval_{model_path.split('/')[1]}_{t_type}_{T_list[1]}.txt"
+            f"pck_eval_{'_'.join(model_path.split('/')[1:])}_{t_type}_{T_list[1]}.txt"
         )
         f = open(file_name, "w")
         for total_pck, name in pck_list:

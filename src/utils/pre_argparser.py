@@ -25,9 +25,9 @@ def pre_arg(args):
     args.num_workers = int(4)
     args.img_scale_factor = int(1)
     args.image_file_or_path = str('../../samples/unity/images/train/Capture0')
-    args.train_yaml = str('../../datasets/freihand/train.yaml')
-    args.val_yaml = str('../../datasets/freihand/test.yaml')
-    args.data_dir = str('datasets')
+    args.train_yaml = str('../../dataset/freihand/train.yaml')
+    args.val_yaml = str('../../dataset/freihand/test.yaml')
+    args.data_dir = str('dataset')
     args.model_name_or_path = str('../modeling/bert/bert-base-uncased/')
     args.config_name = str("")
     args.arch = "hrnet-w64"
