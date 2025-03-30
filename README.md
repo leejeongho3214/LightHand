@@ -31,7 +31,7 @@
     <img src="assets/evaluationset.png", style="width:400px;height:200px">
 </p>
 
-### Download [[HERE](https://mlpa503.synology.me:15051/d/s/11e8Wfd8LCZhQSxOlebul6ZF5dgUJuyj/jNhhV4wX7nsFcCEMthz8s7fH19lYSl0f-er5APyUF9Qs)]
+### Download [[HERE]([https://mlpa503.synology.me:15051/d/s/11e8Wfd8LCZhQSxOlebul6ZF5dgUJuyj/jNhhV4wX7nsFcCEMthz8s7fH19lYSl0f-er5APyUF9Qs](https://mlpa503.synology.me:15051/d/s/11e8C9aU6h8zlSqOdMqodkHMyvnRYddv/kuAILF61CCVg9DVR48jDnjfrxVQQ1HYr-DbPg8XIXKgw))]
 
 ## Directory</br>
 Build as the below architecture 
@@ -48,10 +48,6 @@ Build as the below architecture
     └─ simplebaseline
 
 ```
-
-## Datasets
-You can download these models through the below link.
-It consist of ArmoHAND, FreiHAND and RHD dataset
 
 
 ## Train
