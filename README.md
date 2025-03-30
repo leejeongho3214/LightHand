@@ -14,8 +14,6 @@
     <img src="assets/bg.gif", width="640" height="480">
 </p>
 
-### Download [[HERE](https://mlpa503.synology.me:15051/d/s/11e8WJFEehEJ8oO47O7LUuzq48naY9QX/6tU9h8kmIua_9586DLbZquVvTmS7gAi8-X78AAzEG9Qs)]
-
 </br>
 
 ## Dataset
@@ -31,7 +29,10 @@
     <img src="assets/evaluationset.png", style="width:400px;height:200px">
 </p>
 
-### Download [[HERE]([https://mlpa503.synology.me:15051/d/s/11e8Wfd8LCZhQSxOlebul6ZF5dgUJuyj/jNhhV4wX7nsFcCEMthz8s7fH19lYSl0f-er5APyUF9Qs](https://mlpa503.synology.me:15051/d/s/11e8C9aU6h8zlSqOdMqodkHMyvnRYddv/kuAILF61CCVg9DVR48jDnjfrxVQQ1HYr-DbPg8XIXKgw))]
+### Download [[HERE](https://mlpa503.synology.me:15051/d/s/11e8C9aU6h8zlSqOdMqodkHMyvnRYddv/kuAILF61CCVg9DVR48jDnjfrxVQQ1HYr-DbPg8XIXKgw)]
+### Above link consists both the dataset and the generator
+### But, it need a password to access 
+### please send an e-mail to 72210297@dankook.ac.kr, and I will provide you with pwd.
 
 ## Directory</br>
 Build as the below architecture 
