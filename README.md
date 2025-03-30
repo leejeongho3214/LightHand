@@ -21,14 +21,14 @@
 ## Dataset
 ### Training set
 <p align="left">
-    <img src="assets/trainingset.png", style="width:850px;height:200px">
+    <img src="assets/trainingset.png", style="width:400px;height:200px">
 </p>
 
 </br>
 
 ### Evaluation set
 <p align="left">
-    <img src="assets/evaluationset.png", style="width:850px;height:200px">
+    <img src="assets/evaluationset.png", style="width:400px;height:200px">
 </p>
 
 ### Download [[HERE](https://mlpa503.synology.me:15051/d/s/11e8Wfd8LCZhQSxOlebul6ZF5dgUJuyj/jNhhV4wX7nsFcCEMthz8s7fH19lYSl0f-er5APyUF9Qs)]
