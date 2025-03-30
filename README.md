@@ -30,8 +30,8 @@
 </p>
 
 ### Download [[HERE](https://mlpa503.synology.me:15051/d/s/11e8C9aU6h8zlSqOdMqodkHMyvnRYddv/kuAILF61CCVg9DVR48jDnjfrxVQQ1HYr-DbPg8XIXKgw)]
-Above link consists both the dataset and the generator
-But, it need a password to access 
+Above link consists both the dataset and the generator \\
+But, it need a password to access \\
 please send an e-mail to 72210297@dankook.ac.kr, and I will provide you with pwd.
 
 ## Directory</br>
