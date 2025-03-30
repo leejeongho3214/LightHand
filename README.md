@@ -49,10 +49,6 @@ Build as the below architecture
 
 ```
 
-## Models
-You can download these models through the below link.
-
-
 ## Datasets
 You can download these models through the below link.
 It consist of ArmoHAND, FreiHAND and RHD dataset
