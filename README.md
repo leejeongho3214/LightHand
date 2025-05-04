@@ -5,7 +5,7 @@
 [![Dataset Download](https://img.shields.io/badge/Download-Dataset-red)]()
 
 <p align="left">
-    <img src="assets/GA.jpg" style="width:650px;">
+    <img src="assets/GA.jpg" style="width:1000px;">
 </p>
 
 Code repository for the paper: **"LightHand99K: A Synthetic Dataset for Hand Pose Estimation with Wrist-Worn Cameras"**, published in *IEEE Access* 2025
