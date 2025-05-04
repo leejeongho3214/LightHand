@@ -200,6 +200,7 @@ class Runner_t(object):
                         None,
                     )
                     plt.close()
+                
 
                 self.batch_time.update(time.time() - end)
                 end = time.time()

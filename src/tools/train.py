@@ -9,6 +9,7 @@ from dataset import *
 from src.utils.bar import colored
 
 
+
 def main(args):
 
     random_seed = 9001
@@ -21,6 +22,7 @@ def main(args):
     random.seed(random_seed)
 
     train_dataset, val_dataset = build_dataset(args)
+    
 
     trainset_loader = data.DataLoader(
         dataset=train_dataset,
@@ -45,18 +47,20 @@ def main(args):
             lr=args.lr
         )
     
-    if optimizer_state: optimizer.load_state_dict(optimizer_state)
+    if optimizer_state and not args.optim: optimizer.load_state_dict(optimizer_state)
 
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, _, args, 
-        gamma =0.1, 
-        last_epoch = -1
-        )
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+    #     optimizer, _, args, 
+    #     gamma =0.1, 
+    #     last_epoch = -1
+    #     )
+    
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epoch)
 
     for epoch in range(epo, args.epoch):
         if epoch == epo:
             args.logger.debug(
-                f"Path: {args.output_dir} | Dataset_len: {len(train_dataset)} | Type: {d_type} | Dataset: {args.dataset} | Model: {args.model} | Status: {args.reset} | Max_count : {args.count} | Max_epoch : {args.epoch}"
+                f"Path: {args.output_dir} | Dataset_len: {len(train_dataset)} | Type: {d_type} | Dataset: {args.dataset} | Model: {args.model} | Status: {args.reset} | Drop_step : {args.milestone} | Max_count : {args.count} | Max_epoch : {args.epoch}"
             )
             print(
                 colored(
@@ -109,8 +113,8 @@ def main(args):
             if count == args.count:
                 break
             
-        lr_scheduler.step(count_num = count)
-
+        # lr_scheduler.step(count_num = count)
+        lr_scheduler.step()
             
         gc.collect()
         torch.cuda.empty_cache()

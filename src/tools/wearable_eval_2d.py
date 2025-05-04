@@ -29,12 +29,11 @@ def main():
         num_workers=args.num_workers,
         shuffle=False,
     )
-    print(len(eval_dataset))
-    model_path = "output/simplebaseline/ours"
+    model_path = "output/simplebaseline/frei"
     model_list = list()
     for root, _, files in os.walk(model_path):
         for file in files:
-            if ".bin" in file and root.split("/")[-2].startswith("transfer"):
+            if ".bin" in file:
                 model_list.append(os.path.join(root, file))
 
     aa = [
@@ -42,7 +41,7 @@ def main():
         ["mm", [0, 30]],
         ["mm", [0, 50]],
     ]
-    
+
     for t_type, T_list in aa:
         pbar = tqdm(
             total=len(model_list) * (len(testset_loader) + 4)

@@ -69,6 +69,7 @@ def parse_args(phase="train"):
         help="You can use color jitter to train data as many as you want, according to this ratio",
     )
     parser.add_argument("--epoch", default=100, type=int)
+    parser.add_argument("--lr", default=0.001, type=float)
 
     parser.add_argument("--scale", action="store_true")
     parser.add_argument("--plt", action="store_true")
@@ -78,6 +79,7 @@ def parse_args(phase="train"):
     parser.add_argument("--logger", action="store_true")
     parser.add_argument("--reset", action="store_true")
     parser.add_argument("--rot", action="store_true")
+    parser.add_argument("--optim", action="store_true")
     parser.add_argument(
         "--color",
         action="store_true",
@@ -163,18 +165,23 @@ def load_model(args):
             msg = "init"
             
     if args.transfer:
+        transfer_data = "frei"
         _, _, _model, _, _ = resume_checkpoint(
             _model,
             os.path.join(
-                "output/simplebaseline/frei/ori", "checkpoint-good/state_dict.bin"
+                f"output/{args.model}/{transfer_data}/ori", "checkpoint-good/state_dict.bin"
             ),
         )
         args.logger.debug(
-            "Transfer_Loading ===> %s" % os.path.join(args.root_path, args.name)
+            "Transfer_Loading ===> %s" % os.path.join(
+                f"output/{args.model}/{transfer_data}/ori", "checkpoint-good/state_dict.bin"
+            )
         )
         print(
             colored(
-                "Transfer_Loading ===> %s" % os.path.join(args.root_path, args.name),
+                "Transfer_Loading ===> %s" % os.path.join(
+                f"output/{args.model}/{transfer_data}/ori", "checkpoint-good/state_dict.bin"
+            ),
                 "green",
             )
         )
@@ -326,7 +333,7 @@ def pred_eval(args, T_list, p_bar, method):
     meta = meta[0]
     if method == "mm":
         # change pixel coordinate to mm coordinate
-        thresholds_list = np.linspace(T_list[0], T_list[-1], 101)[1:] * 3.7795275591
+        thresholds_list = np.linspace(T_list[0], T_list[-1], 101)[1:] * 2.83464567
     elif method == "pckb":
         thresholds_list = np.linspace(T_list[0], T_list[-1], 100)
     else:

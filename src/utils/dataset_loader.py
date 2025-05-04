@@ -3,6 +3,7 @@ import pickle
 import cv2
 from matplotlib import pyplot as plt
 import scipy.io as sio
+from tqdm import tqdm
 from src.utils.transforms import world2cam, cam2pixel
 from src.utils.preprocessing import load_skeleton, process_bbox
 from pycocotools.coco import COCO
@@ -52,53 +53,6 @@ class GenerateHeatmap():
         return hms
 
 
-class HIU_Dataset(Dataset):
-    def __init__(self, args):
-        image_list = []
-        for (root, _, files) in os.walk("../../datasets/HIU_DMTL"):
-            for file in files:
-                if not file.endswith('.json') and not file.endswith('_mask.png') and not file.endswith('_mask.jpg'):
-                    file_path = os.path.join(root, file)
-                    anno_name = file_path[:-4] + '.json'
-                    if os.path.isfile(os.path.join(root, anno_name)):
-                        image_list.append((file_path, anno_name))
-        self.image = image_list
-        self.args = args
-
-    def __len__(self):
-        return len(self.image)
-
-    def __getitem__(self, idx):
-
-        if not self.args.model == "ours":
-            size = 256
-        else:
-            size = 224
-        image = Image.open(self.image[idx][0])
-        scale_x = size / image.width
-        scale_y = size / image.height
-
-        with open(self.image[idx][1], "r") as st_json:
-            annotation = json.load(st_json)
-
-        if annotation['hand_type'][0] == 0:
-            joint = annotation['pts2d_2hand'][21:]
-        else:
-            joint = annotation['pts2d_2hand'][:21]
-        trans = transforms.Compose([transforms.Resize((size, size)),
-                                    transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
-        trans_image = trans(image)
-        joint_2d = torch.tensor(joint)
-        joint_2d[:, 0] = joint_2d[:, 0] * scale_x
-        joint_2d[:, 1] = joint_2d[:, 1] * scale_y
-
-        if self.args.model == "hrnet":
-            heatmap = GenerateHeatmap(128, 21)(joint_2d / 2)
-        else:
-            heatmap = GenerateHeatmap(64, 21)(joint_2d / 4)
-        return image, joint_2d, heatmap     # check plz
 
 class Dataset_interhand(torch.utils.data.Dataset):
     def __init__(self, mode, args):
@@ -336,49 +290,74 @@ class RHD(Dataset):
         self.args = args
         self.path = "../../dataset/RHD_published_v2"
         self.phase = phase
-        
         with open(f"../../dataset/RHD_published_v2/{phase}/anno_{phase}.pickle", "rb") as st_json:
-            self.anno = pickle.load(st_json)
-
+            self.p_anno = pickle.load(st_json)
+        self.sorting()
 
     def __len__(self):
         return len(self.anno)
+    
+    def sorting(self):
+        sorted_list = []
+        for idx in tqdm(self.p_anno.keys()):
+            seg_img = cv2.imread(os.path.join(
+            self.path, self.phase, "mask", f"{idx:05d}.png"), cv2.IMREAD_GRAYSCALE)
+        
+            # 17보다 큰 픽셀들의 좌표 찾기
+            indices = np.where(seg_img > 17)
+            
+            if (len(indices[0]) == 0 or len(indices[1]) == 0):
+                sorted_list.append(idx)
+            else:
+                # Bounding Box의 좌표 계산 (최소값, 최대값)
+                x_min, y_min = np.min(indices[1]), np.min(indices[0])
+                x_max, y_max = np.max(indices[1]), np.max(indices[0])
+                if (x_max - x_min) < 30 or (y_max - y_min) < 30:
+                    sorted_list.append(idx)
+                
+        self.anno = [[idx, self.p_anno[idx]] for idx in self.p_anno.keys() if idx not in sorted_list]
+        # self.anno = {idx: item for idx, item in self.anno.items() if int(idx) not in sorted_list}
 
     def __getitem__(self, idx):
         ori_img = Image.open(os.path.join(
-            self.path, self.phase, "color", f"{idx:05d}.png"))
-        joint_z = np.matmul(self.anno[idx]["K"], self.anno[idx]["xyz"].T).T
+            self.path, self.phase, "color", f"{self.anno[idx][0]:05d}.png"))
+        ori_img = np.array(ori_img)
+
+        joint_z = np.matmul(self.anno[idx][1]["K"], self.anno[idx][1]["xyz"].T).T
         joint = joint_z / joint_z[:, -1].reshape(-1, 1)
+        joint = joint[21:]
         
-        # bbox = list(map(int, self.anno['annotations'][idx]['bbox']))
-        img = np.array(ori_img)
+        # Bounding Box의 좌표 계산 (최소값, 최대값)
+        h_min, w_min = np.min(joint[:,1]), np.min(joint[:,0])
+        h_max, w_max = np.max(joint[:,1]), np.max(joint[:,0])
+        
+
+        spare = int(max(w_max-w_min, h_max-h_min) * 0.4)
+        s_h_max = max(int(h_max + spare), 0)
+        s_h_min = min(int(h_min - spare), ori_img.shape[0])
+        s_w_max = max(int(w_max + spare), 0)
+        s_w_min = min(int(w_min - spare), ori_img.shape[1])
+        img = ori_img[s_h_min:s_h_max, s_w_min:s_w_max]
+
+        joint[:, 1] = (joint[:, 1] - s_h_min) / (s_h_max - s_h_min)
+        joint[:, 0] = (joint[:, 0] - s_w_min) / (s_w_max - s_w_min)
 
         if not self.args.model == "ours":
             size = 256
         else:
             size = 224
-            
-        # if bbox[2] % 2 == 1: bbox[2] - 1
-        # if bbox[3] % 2 == 1: bbox[3] - 1
-        # space_l = int(224 - bbox[3]) / 2; space_r = int(224 - bbox[2]) / 2
-        # if (bbox[1] - space_l) < 0: space_l = bbox[1]
-        # if (bbox[1] + bbox[3] + space_l) > ori_img.height: space_l = ori_img.height - (bbox[1] + bbox[3]) - 1
-        # if (bbox[0] - space_r) < 0: space_r = bbox[0]
-        # if (bbox[0] +  bbox[2] + space_r) > ori_img.width: space_r = ori_img.width - (bbox[0] + bbox[2]) - 1
-        
-        # img = img[int(bbox[1] - space_l): int(bbox[1] + bbox[3] + space_l), int(bbox[0] -  space_r) : int(bbox[0] + bbox[2] +  space_r)]
-        # joint[:, 0] = (joint[:, 0] - bbox[0] + space_r) * (self.anno['images'][idx]['width']/(bbox[2] + 2*space_r))
-        # joint[:, 1] = (joint[:, 1] - bbox[1] + space_l) * (self.anno['images'][idx]['width']/(bbox[3] + 2*space_l))
         
         joint_order = [0, 4, 3, 2, 1, 8, 7, 6, 5, 12,
                        11, 10, 9, 16, 15, 14, 13, 20, 19, 18, 17]
         
         trans = transforms.Compose([transforms.Resize((size, size)),
                                     transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                    0.229, 0.224, 0.225])]
+                                   )
         joint = joint[joint_order, :]
-        joint[:, 0] = joint[:, 0] * (size / 320)
-        joint[:, 1] = joint[:, 1] * (size / 320)
+        joint[:, 0] = joint[:, 0] * size
+        joint[:, 1] = joint[:, 1] * size
         joint = torch.tensor(joint)
 
         # heatmap = GenerateHeatmap(64, 21)(joint/4)
@@ -522,7 +501,8 @@ class GAN(Dataset):
 
         trans = transforms.Compose([transforms.Resize((size, size)),
                                     transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                     0.229, 0.224, 0.225])])
 
         trans_image = trans(image)
 

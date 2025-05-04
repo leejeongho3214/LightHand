@@ -107,12 +107,9 @@ class HandMeshTSVDataset(object):
         flip = 0            # flipping
         pn = np.ones(3)  # per channel pixel-noise
 
-        if self.args.multiscale_inference == False:
-            rot = 0 # rotation
-            sc = 1.0 # scaling
-        elif self.args.multiscale_inference == True:
-            rot = self.args.rot
-            sc = self.args.sc
+        rot = 0 # rotation
+        sc = 1.0 # scaling
+
 
         if self.is_train:
             sc = 1.0 
