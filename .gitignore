@@ -18,6 +18,8 @@ output
 tensorboard
 /datasets
 
+!assets
+
 .env
 check_joint_num.py
 frei.py
