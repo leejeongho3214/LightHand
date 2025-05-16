@@ -1,8 +1,9 @@
 # LightHand99K: A Synthetic Dataset for Hand Pose Estimation with Wrist-Worn Cameras
 
-[![Paper](https://img.shields.io/badge/Paper-IEEE_ACCESS-blue)]()
-[![Tool Download](https://img.shields.io/badge/Download-Generator-Green)]()
-[![Dataset Download](https://img.shields.io/badge/Download-Dataset-red)]()
+[![Paper](https://img.shields.io/badge/Paper-IEEE_ACCESS-blue)](https://ieeexplore.ieee.org/document/10988778)
+[![Tool Download](https://img.shields.io/badge/Download-Generator-Green)](https://mlpa503.synology.me:15051/d/s/12hOp2DNKaj6DYBP2liU5FE5lAHWP5RU/Ysq8OKrh58lkMVaxg31D9U_ssYhpk4Mu-FrUg33yBSAw)
+[![Dataset Download](https://img.shields.io/badge/Download-Dataset(train/val)-red)]()
+[![Dataset Download](https://img.shields.io/badge/Download-Dataset(test)-red)](https://mlpa503.synology.me:15051/d/s/10ubD0JMn8WdYmtNjgdUfKkY6M8Xg2un/V3bA-avaSff4AshI9D79reY5LKFg0HVB-RLYAptGCSAw)
 
 <p align="left">
     <img src="assets/GA.jpg" style="width:1000px;">
@@ -121,9 +122,9 @@ Build your project using the following structure:
 
 ---
 
-## 🧠 Models & Training
+## 🧠 Download
 
-You can download models trained on LightHand99K and others. Dataset includes ArmoHAND, FreiHAND, and RHD.
+All dataset links require a password, so feel free to contact me at [72210297@dankook.ac.kr](mailto:72210297@dankook.ac.kr) if you need access.
 
 ### 🏃‍♂️ Training
 
@@ -148,7 +149,17 @@ python hrnet/frei/2d  # example
 Please cite this paper if you use the dataset or generator:
 
 ```bibtex
-Comming Soon..
+@ARTICLE{10988778,
+  author={Lee, Jeongho and Kim, Changho and Kim, Jaeyun and Kim, Seon Ho and Choi, Younggeun and Choi, Sang-Il},
+  journal={IEEE Access}, 
+  title={LightHand99K: A Synthetic Dataset for Hand Pose Estimation With Wrist-Worn Cameras}, 
+  year={2025},
+  volume={13},
+  number={},
+  pages={81423-81433},
+  keywords={Hands;Cameras;Three-dimensional displays;Generators;Solid modeling;Pose estimation;Lighting;Graphical user interfaces;Accuracy;Training;Data augmentation;deep learning;hand data generator;hand pose estimation;RGB hand images;synthetic dataset;wrist-worn camera},
+  doi={10.1109/ACCESS.2025.3567313}}
+
 ```
 
 ---
