@@ -65,6 +65,23 @@ Code repository for the paper: **"LightHand99K: A Synthetic Dataset for Hand Pos
     <img src="assets/bg.gif" width="640" height="480">
 </p>
 
+### Camera Controls
+
+You can manually control the camera after enabling it by clicking the **“FreeMove”** button.
+* W, A, S, D: Move forward, left, backward, right
+* Q, E: Move down, up
+* Shift: Increases camera speed while held
+* Right mouse drag: Rotate the camera
+* Mouse scroll wheel: Zoom in / Zoom out (adjusts FOV)
+
+### Preset Setting
+
+To generate images from various views, follow these steps:
+* First, adjust the camera to your desired viewpoint and save it as a preset.
+* Second, After saving multiple presets, you can generate images using two methods below.
+    * For automatic generation, enter the number of images you want in the **“Auto Generate”** field and click the button.    
+    * For manual generation, click the **“Randomize”** button to shuffle poses, and press **“Capture”** when you find a pose you like.
+
 ---
 
 ## 🧪 Dataset Examples
