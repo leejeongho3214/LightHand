@@ -18,7 +18,7 @@ Code repository for the paper: **"LightHand99K: A Synthetic Dataset for Hand Pos
 
 ---
 
-## 🔄 Generator Update
+## 🔄 Generator Update (2025-07-05)
 
 We discovered a bug in the previous generator that caused issues with image saving.
 The updated generator has fixed this issue. Please download [the new version](https://mlpa503.synology.me:15051/d/s/143Fz7mIZ8gCBHX65gt3fV7aFuRO9euh/6msd-oCNGlOFZK1iwFi9_Mteva4UVnY5-a7CgwwGxaAw).
