@@ -24,7 +24,7 @@ We discovered a bug in the previous generator that caused issues with image savi
 The updated generator has fixed this issue. Please download [the new version](https://mlpa503.synology.me:15051/d/s/143Fz7mIZ8gCBHX65gt3fV7aFuRO9euh/6msd-oCNGlOFZK1iwFi9_Mteva4UVnY5-a7CgwwGxaAw).
 
 * 🔧 Please note that the “Capture” button is no longer available in this version.
-* 📖 Add instructions for using the generator below ["Tool Examples" Section](###Camera_Controls)
+* 📖 Add instructions for using the generator below ["Tool Examples" Section](#Camera-Controls)
 
 ---
 
