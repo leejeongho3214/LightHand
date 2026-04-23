@@ -1,9 +1,9 @@
 # LightHand99K: A Synthetic Dataset for Hand Pose Estimation with Wrist-Worn Cameras
 
 [![Paper](https://img.shields.io/badge/Paper-IEEE_ACCESS-blue)](https://ieeexplore.ieee.org/document/10988778)
-[![Tool Download](https://img.shields.io/badge/Download-Generator-Green)](https://mlpa503.synology.me:15051/d/s/143Fz7mIZ8gCBHX65gt3fV7aFuRO9euh/6msd-oCNGlOFZK1iwFi9_Mteva4UVnY5-a7CgwwGxaAw)
+[![Tool Download](https://img.shields.io/badge/Download-Generator-Green)](https://drive.mlpa503.synology.me/d/s/143Fz7mIZ8gCBHX65gt3fV7aFuRO9euh/6msd-oCNGlOFZK1iwFi9_Mteva4UVnY5-a7CgwwGxaAw)
 [![Dataset Download](https://img.shields.io/badge/Download-Dataset(train/val)-red)](https://gofile.me/7wbhv/1njPve4X4)
-[![Dataset Download](https://img.shields.io/badge/Download-Dataset(test)-red)](https://mlpa503.synology.me:15051/d/s/10ubD0JMn8WdYmtNjgdUfKkY6M8Xg2un/V3bA-avaSff4AshI9D79reY5LKFg0HVB-RLYAptGCSAw)
+[![Dataset Download](https://img.shields.io/badge/Download-Dataset(test)-red)](https://drive.mlpa503.synology.me/d/s/10ubD0JMn8WdYmtNjgdUfKkY6M8Xg2un/V3bA-avaSff4AshI9D79reY5LKFg0HVB-RLYAptGCSAw)
 
 <p align="left">
     <img src="assets/GA.jpg" style="width:1000px;">
@@ -21,7 +21,7 @@ Code repository for the paper: **"LightHand99K: A Synthetic Dataset for Hand Pos
 ## 🔄 Generator Update (2025-07-05)
 
 We discovered a bug in the previous generator that caused issues with image saving.
-The updated generator has fixed this issue. Please download [the new version](https://mlpa503.synology.me:15051/d/s/143Fz7mIZ8gCBHX65gt3fV7aFuRO9euh/6msd-oCNGlOFZK1iwFi9_Mteva4UVnY5-a7CgwwGxaAw).
+The updated generator has fixed this issue. Please download [the new version](https://drive.mlpa503.synology.me/d/s/143Fz7mIZ8gCBHX65gt3fV7aFuRO9euh/6msd-oCNGlOFZK1iwFi9_Mteva4UVnY5-a7CgwwGxaAw).
 
 * 🔧 Please note that the “Capture” button is no longer available in this version.
 * 📖 Add instructions for using the generator below the ["Tool Examples" Section](#Camera-Controls)
