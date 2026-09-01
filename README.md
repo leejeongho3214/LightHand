@@ -1,198 +1,260 @@
-# LightHand99K: A Synthetic Dataset for Hand Pose Estimation with Wrist-Worn Cameras
+<div align="center">
 
-[![Paper](https://img.shields.io/badge/Paper-IEEE_ACCESS-blue)](https://ieeexplore.ieee.org/document/10988778)
-[![Tool Download](https://img.shields.io/badge/Download-Generator-Green)](https://drive.mlpa503.synology.me/d/s/143Fz7mIZ8gCBHX65gt3fV7aFuRO9euh/6msd-oCNGlOFZK1iwFi9_Mteva4UVnY5-a7CgwwGxaAw)
-[![Dataset Download](https://img.shields.io/badge/Download-Dataset(train/val)-red)](https://gofile.me/7wbhv/M2odCEsFB)
-[![Dataset Download](https://img.shields.io/badge/Download-Dataset(test)-red)](https://drive.mlpa503.synology.me/d/s/10ubD0JMn8WdYmtNjgdUfKkY6M8Xg2un/V3bA-avaSff4AshI9D79reY5LKFg0HVB-RLYAptGCSAw)
+# LightHand99K
 
-<p align="left">
-    <img src="assets/GA.jpg" style="width:1000px;">
-</p>
+### A Synthetic Dataset for Hand Pose Estimation with Wrist-Worn Cameras
 
-Code repository for the paper: **"LightHand99K: A Synthetic Dataset for Hand Pose Estimation with Wrist-Worn Cameras"**, published in *IEEE Access* 2025
+[![Paper](https://img.shields.io/badge/%F0%9F%93%84_Paper-IEEE_Access_2025-00629b)](https://ieeexplore.ieee.org/document/10988778)
+[![SHaF](https://img.shields.io/badge/GitHub-SHaF-6f42c1?logo=github)](https://github.com/leejeongho3214/SHaF)
+[![Contact](https://img.shields.io/badge/Contact-Email-informational?logo=gmail)](mailto:72210297@dankook.ac.kr)
 
-**Authors:** Jeongho Lee¹, Changho Kim¹, Jaeyun Kim¹, Seon Ho Kim², Younggeun Choi¹, Sang-Il Choi¹
+**Jeongho Lee**¹ · Changho Kim¹ · Jaeyun Kim¹ · Seon Ho Kim² · Younggeun Choi¹ · Sang-Il Choi¹
 
-¹ Dankook University, South Korea <br>
-² University of Southern California, United States
+¹ Dankook University, South Korea &nbsp;&nbsp;·&nbsp;&nbsp; ² University of Southern California, United States
 
----
+<img src="assets/GA.jpg" width="900">
 
-## 🔄 Generator Update (2025-07-05)
-
-We discovered a bug in the previous generator that caused issues with image saving.
-The updated generator has fixed this issue. Please download [the new version](https://drive.mlpa503.synology.me/d/s/143Fz7mIZ8gCBHX65gt3fV7aFuRO9euh/6msd-oCNGlOFZK1iwFi9_Mteva4UVnY5-a7CgwwGxaAw).
-
-* 🔧 Please note that the “Capture” button is no longer available in this version.
-* 📖 Add instructions for using the generator below the ["Tool Examples" Section](#Camera-Controls)
+</div>
 
 ---
 
-## 🔍 Overview
+## 📌 Overview
 
-**LightHand99K** is a large-scale synthetic dataset specifically designed for training and evaluating hand pose estimation models from **wrist-worn camera perspectives**. It contains **99,792 photorealistic RGB hand images** with precise 2D annotations and is generated using a Unity-based renderer.
+Wrist-worn cameras see the hand from an angle almost no public dataset covers — extreme foreshortening, self-occlusion by the thumb and pinky, and a viewpoint that shifts with the wrist itself. **LightHand99K** fills that gap with **99,792 photorealistic RGB hand images** rendered from the wrist perspective in Unity, each annotated with 2D keypoints for all 21 hand joints.
 
----
+The dataset ships together with the **Unity generator** that produced it, so the camera rig, hand poses and backgrounds can be re-configured and re-rendered for a different wrist-worn device rather than being fixed at ours.
 
-## ✨ Key Features
-
-* 🖐️ **99K+ wrist-perspective RGB hand images**
-* 👤 Diverse pose types including occlusions by pinky, thumb, or both
-* 🌟 High-resolution rendering with real-world backgrounds
-* 🛠️ Unity-based generator with full control camera angle and random pose
-* 🔄 Compatible with top-down 2D pose estimation pipelines
+> [!NOTE]
+> **[2025-07-05] Generator update** — a bug affecting image saving has been fixed; please re-download the generator below. The **Capture** button has been removed; the current workflow is documented in [Generating your own data](#-generating-your-own-data).
 
 ---
 
-## 📂 Dataset Contents
+## 📥 Downloads
 
-### 🏷️ Annotation includes:
+| Resource | Contents | Link |
+| --- | --- | --- |
+| **Generator** | Unity tool — render your own images, export 3D coordinates and camera parameters | [Download](https://drive.mlpa503.synology.me/d/s/143Fz7mIZ8gCBHX65gt3fV7aFuRO9euh/6msd-oCNGlOFZK1iwFi9_Mteva4UVnY5-a7CgwwGxaAw) |
+| **Dataset — train / val** | Synthetic wrist-view images + 2D keypoints | [Download](https://gofile.me/7wbhv/M2odCEsFB) |
+| **Dataset — test** | Real wrist-camera evaluation set | [Download](https://drive.mlpa503.synology.me/d/s/10ubD0JMn8WdYmtNjgdUfKkY6M8Xg2un/V3bA-avaSff4AshI9D79reY5LKFg0HVB-RLYAptGCSAw) |
 
-* RGB image
-* 2D keypoints for 21 hand joints
-
-> ⚠️ Note: Only **2D keypoints** are provided in the public dataset because they are used for training. However, **3D world coordinates** and **camera parameters** can be accessed through the generator program, allowing users to customize and extract more information as needed.
-
-### 🔧 Additional Available Data (via generator program)
-
-* 3D world coordinates for 21 hand joints
-* Camera intrinsic, extrinsic parameters, principle points
-* Metadata
+> 🔑 All archives are password-protected. Email [72210297@dankook.ac.kr](mailto:72210297@dankook.ac.kr) for the credentials.
 
 ---
 
-## 🧰 Tool Examples
+## 🖐️ Dataset
 
-### Randomize background OFF
+| Property | Value |
+| --- | --- |
+| Images | **99,792** photorealistic RGB |
+| Viewpoint | Wrist-worn camera |
+| Annotation | 2D keypoints, 21 hand joints |
+| Pose variation | Includes occlusion by thumb, pinky, or both |
+| Backgrounds | Real-world images, randomizable |
+| Renderer | Unity |
 
-<p align="left">
-    <img src="assets/nobg.gif" width="640" height="480">
-</p>
+**Public release vs. generator output**
 
-### Randomized background ON
+| | 2D keypoints | 3D world coordinates | Camera intrinsics / extrinsics / principal point | Metadata |
+| --- | :---: | :---: | :---: | :---: |
+| Downloadable dataset | ✅ | — | — | — |
+| Generated yourself | ✅ | ✅ | ✅ | ✅ |
 
-<p align="left">
-    <img src="assets/bg.gif" width="640" height="480">
-</p>
+The published archive carries 2D keypoints only. Everything else is available if you render the data yourself with the generator — which is the intended path when your camera geometry differs from ours.
 
-### Camera Controls
-
-You can manually control the camera after enabling it by clicking the **“FreeMove”** button.
-* W, A, S, D: Move forward, left, backward, right
-* Q, E: Move down, up
-* Shift: Increases camera speed while held
-* Right mouse drag: Rotate the camera
-* Mouse scroll wheel: Zoom in / Zoom out (adjusts FOV)
-
-### Preset Setting
-
-To generate images from various views, follow these steps:
-* First, adjust the camera to your desired viewpoint and save it as a preset.
-* Second, After saving multiple presets, you can generate images using two methods below.
-    * For automatic generation, enter the number of images you want in the **“Auto Generate”** field and click the button.    
-    * For manual generation, click the **“Randomize”** button to shuffle poses, and press **“Capture”** when you find a pose you like.
+<div align="center">
+  <img src="assets/trainingset.png" width="850">
+  <br><sub><b>Training set</b> — LightHand99K (synthetic)</sub>
+  <br><br>
+  <img src="assets/evaluationset.png" width="850">
+  <br><sub><b>Evaluation set</b> — real wrist-camera captures</sub>
+</div>
 
 ---
 
-## 🧪 Dataset Examples
+## 🎮 Generating Your Own Data
 
-### Training set (**LightHand99K**)
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><b>Randomize background — OFF</b></td>
+      <td align="center"><b>Randomize background — ON</b></td>
+    </tr>
+    <tr>
+      <td><img src="assets/nobg.gif" width="420"></td>
+      <td><img src="assets/bg.gif" width="420"></td>
+    </tr>
+  </table>
+</div>
 
-<p align="left">
-    <img src="assets/trainingset.png" style="width:850px;height:200px">
-</p>
+**What the generator gives you**
 
-### Evaluation set (Real)
+- Anatomically valid poses — joint angles are constrained to biomechanical ranges
+- Camera presets for side, top and front views, plus free-flight positioning
+- Custom background images
+- Full annotation export: 3D joint coordinates, camera parameters, metadata
 
-<p align="left">
-    <img src="assets/evaluationset.png" style="width:850px;height:200px">
-</p>
+### Camera controls
+
+Enable **FreeMove** to take manual control of the camera.
+
+| Input | Action |
+| --- | --- |
+| `W` `A` `S` `D` | Move forward / left / backward / right |
+| `Q` `E` | Move down / up |
+| `Shift` (hold) | Increase movement speed |
+| Right-mouse drag | Rotate the camera |
+| Scroll wheel | Zoom in / out (adjusts FOV) |
+
+### Preset workflow
+
+1. Position the camera at a viewpoint you want, then **save it as a preset**.
+2. Repeat until you have covered the viewpoints your device needs.
+3. Render with either:
+   - **Auto Generate** — enter an image count and let it run across all presets, or
+   - **Randomize** — shuffle the pose and capture the results you like.
 
 ---
 
-## 📊 Benchmark Results
+## 📊 Benchmark
 
-| Model          | Dataset      | AUC (↑)  | EPE (↓ mm) |
-| -------------- | ------------ | -------- | ---------- |
-| SimpleBaseline | LightHand99K | **90.4** | **3.3**    |
-| HRNet          | LightHand99K | **83.5** | **4.3**    |
-| FreiHAND       | Real Dataset | 64.4     | 7.1        |
-| RHD            | Synthetic    | 59.0     | 8.2        |
+2D hand pose estimation on the real wrist-camera evaluation set. **AUC** of the PCK curve (higher is better) and **EPE** in millimetres (lower is better).
 
----
+| Training data | Model | AUC ↑ | EPE ↓ (mm) |
+| --- | --- | --- | --- |
+| **LightHand99K** | SimpleBaseline | **90.4** | **3.3** |
+| **LightHand99K** | HRNet | **83.5** | **4.3** |
+| FreiHAND (real) | — | 64.4 | 7.1 |
+| RHD (synthetic) | — | 59.0 | 8.2 |
 
-## 🛠️ Unity Generator Highlights
-
-* Valid joint angle controlled by constraints
-* Camera preset selection (side, top, front)
-* Desired background image
+Models trained on LightHand99K transfer to real wrist-camera footage far better than those trained on existing real or synthetic sets — the viewpoint match matters more than photorealism alone.
 
 ---
 
-## 🗂 Directory Structure
+## 🚀 Getting Started
 
-Build your project using the following structure:
+### 1. Environment
 
 ```bash
+git clone https://github.com/leejeongho3214/LightHand.git
+cd LightHand
+
+conda env create -f requirements.yaml   # creates the "Pose" environment
+conda activate Pose
+```
+
+### 2. Expected layout
+
+```
 {$ROOT}
-├── src
-│   └─ tools
-│       └─ train.py
-├── datasets
-│   └─ freihand
-│   └─ LightHand99K
-│   └─ Etc.
-└── models
-    └─ hrnet
-    └─ simplebaseline
+├── assets/                 # figures used in this README
+├── src/
+│   ├── modeling/           # HRNet, SimpleBaseline
+│   ├── utils/              # argparser, losses, metrics, dataloaders
+│   └── tools/
+│       ├── train.py
+│       ├── wearable_eval_2d.py
+│       ├── dataset.py
+│       └── processing_aug.py
+├── datasets/               # ← place your data here
+│   ├── LightHand99K/
+│   ├── freihand/
+│   └── ...
+├── models/                 # ← pretrained backbones
+│   ├── hrnet/
+│   └── simplebaseline/
+└── requirements.yaml
+```
+
+### 3. Train
+
+```bash
+cd src/tools
+python train.py --root simplebaseline/ours --name my_run --epoch 100 --count 30
+```
+
+`--root` follows the pattern `<backbone>/<dataset-key>`; the dataset key is taken from the last path segment, and checkpoints are written under `<--root_path>/<--root>/<--name>`.
+
+**Dataset keys**
+
+| Key | Dataset |
+| --- | --- |
+| `ours` | LightHand99K |
+| `frei` | FreiHAND |
+| `interhand` | InterHand |
+| `rhd` | RHD |
+| `gan` | GANerated Hands |
+
+<details>
+<summary><b>All training options</b></summary>
+
+<br>
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--root` | `simplebaseline/ours` | `<backbone>/<dataset-key>` — also determines `--dataset` |
+| `--name` | `84k` | Run name; checkpoint and log folder |
+| `--root_path` | `output` | Root directory for all outputs |
+| `--model` | `ours` | Model variant |
+| `--view` | `wrist` | Camera viewpoint of the data |
+| `--epoch` | `100` | Maximum epochs |
+| `--batch_size` | `32` | Batch size |
+| `--lr` | `0.001` | Learning rate |
+| `--milestone` | `10` | LR schedule milestone |
+| `--count` | `30` | Early stopping — stop after N epochs without validation improvement |
+| `--num_our` | `300000` | How many LightHand images to draw for training |
+| `--ratio_of_other` | `0` | Fraction of an additional dataset to mix in |
+| `--ratio_of_aug` | `0.6` | Fraction of training images to augment |
+| `--color` | off | Apply color jitter (uses `--ratio_of_aug`) |
+| `--rot` | off | Apply rotation augmentation |
+| `--scale` | off | Apply scale augmentation |
+| `--D3` | off | Predict 3D joint coordinates instead of 2D |
+| `--transfer` | off | Fine-tune from a pretrained checkpoint |
+| `--optim` | off | Restore optimizer state when resuming |
+| `--reset` | off | Ignore any existing checkpoint and start fresh |
+| `--eval` / `--test` | off | Evaluation / test mode |
+| `--plt` | off | Save prediction plots |
+| `--logger` | off | Enable file logging |
+
+</details>
+
+### 4. Evaluate
+
+```bash
+cd src/tools
+python wearable_eval_2d.py --root simplebaseline/ours --name my_run
 ```
 
 ---
 
-## 🧠 Download
-
-All dataset links require a password, so feel free to contact me at [72210297@dankook.ac.kr](mailto:72210297@dankook.ac.kr) if you need access.
-
-### 🏃‍♂️ Training
-
-```bash
-cd {$ROOT}/src/tools
-python hrnet/frei/2d  # example
-```
-
-### ⚙️ Training Arguments
-
-```bash
---name hrnet/frei/2d --epoch 100 --count 5 --reset
-```
-
-* `count`: stop if valid loss doesn't improve after 5 epochs
-* `--reset`: skip checkpoint loading (fresh start)
-
----
-
-## 📄 Citation
-
-Please cite this paper if you use the dataset or generator:
+## 📖 Citation
 
 ```bibtex
-@ARTICLE{10988778,
-  author={Lee, Jeongho and Kim, Changho and Kim, Jaeyun and Kim, Seon Ho and Choi, Younggeun and Choi, Sang-Il},
-  journal={IEEE Access}, 
-  title={LightHand99K: A Synthetic Dataset for Hand Pose Estimation With Wrist-Worn Cameras}, 
-  year={2025},
-  volume={13},
-  number={},
-  pages={81423-81433},
-  keywords={Hands;Cameras;Three-dimensional displays;Generators;Solid modeling;Pose estimation;Lighting;Graphical user interfaces;Accuracy;Training;Data augmentation;deep learning;hand data generator;hand pose estimation;RGB hand images;synthetic dataset;wrist-worn camera},
-  doi={10.1109/ACCESS.2025.3567313}}
-
+@article{lee2025lighthand99k,
+  title   = {LightHand99K: A Synthetic Dataset for Hand Pose Estimation
+             With Wrist-Worn Cameras},
+  author  = {Lee, Jeongho and Kim, Changho and Kim, Jaeyun and Kim, Seon Ho
+             and Choi, Younggeun and Choi, Sang-Il},
+  journal = {IEEE Access},
+  volume  = {13},
+  pages   = {81423--81433},
+  year    = {2025},
+  doi     = {10.1109/ACCESS.2025.3567313}
+}
 ```
 
 ---
 
-## 📧 Contact
+## 🔗 Related Work
 
-> Dankook University, Korea <br>
-> Ph.D program, Department in Computer Science <br>
-> Jeongho Lee: [72210297@dankook.ac.kr](mailto:72210297@dankook.ac.kr)
+| Year | Venue | Project |
+| --- | --- | --- |
+| 2025 | IEEE Access | **LightHand99K** — this repository |
+| 2024 | Applied Intelligence | [**SHaF** — synthetic hand dataset including a forearm](https://github.com/leejeongho3214/SHaF) |
+
+---
+
+## 📬 Contact
+
+> Ph.D. Program, Department of Computer Science
+> Dankook University, South Korea
+> **Jeongho Lee** · 📧 [72210297@dankook.ac.kr](mailto:72210297@dankook.ac.kr)
