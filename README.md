@@ -225,6 +225,13 @@ python wearable_eval_2d.py --root simplebaseline/ours --name my_run
 
 ---
 
+## 📜 License
+
+- **Code**: [MIT License](LICENSE)
+- **Dataset & Generator**: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — free to use, including commercially. Please cite our paper.
+
+The generator contains third-party assets that remain subject to their own licenses.
+
 ## 📖 Citation
 
 ```bibtex
